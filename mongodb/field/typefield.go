@@ -37,9 +37,7 @@ type IntegerField[T Integer] struct {
 func NewIntegerField[T Integer](fName string) *IntegerField[T] {
 	b := &base{fName}
 	flt := &IntegerFieldFilter[T]{
-		ComparableFilter: &filter.ComparableFilter[T]{
-			BaseFilter: &filter.BaseFilter[T]{
-				Field: b}}}
+		ComparableFilter: filter.NewComparableFilter[T](&filter.BaseFilter[T]{Field: b})}
 
 	return &IntegerField[T]{
 		BaseKey:            &index.BaseKey{Field: b},
@@ -67,9 +65,7 @@ type UnIntegerField[T UnInteger] struct {
 func NewUnIntegerField[T UnInteger](fName string) *UnIntegerField[T] {
 	b := &base{fName}
 	flt := &IntegerFieldFilter[T]{
-		ComparableFilter: &filter.ComparableFilter[T]{
-			BaseFilter: &filter.BaseFilter[T]{
-				Field: b}}}
+		ComparableFilter: filter.NewComparableFilter[T](&filter.BaseFilter[T]{Field: b})}
 	c := &updater.ComputableUpdater[T]{BaseUpdater: &updater.BaseUpdater[T]{Field: b}}
 
 	return &UnIntegerField[T]{
@@ -103,9 +99,7 @@ func (s *StringFieldFilter) Regex(regex bson.Regex) filter.Filter {
 func NewStringField(fName string) *StringField {
 	b := &base{fName}
 	flt := &StringFieldFilter{
-		ComparableFilter: &filter.ComparableFilter[string]{
-			BaseFilter: &filter.BaseFilter[string]{
-				Field: b}}}
+		ComparableFilter: filter.NewComparableFilter[string](&filter.BaseFilter[string]{Field: b})}
 
 	return &StringField{
 		BaseKey:           &index.BaseKey{Field: b},
@@ -125,7 +119,7 @@ func NewComparableField[T ~bool | bson.ObjectID](fName string) *ComparableField[
 
 	return &ComparableField[T]{
 		BaseKey:          &index.BaseKey{Field: b},
-		ComparableFilter: &filter.ComparableFilter[T]{BaseFilter: &filter.BaseFilter[T]{Field: b}},
+		ComparableFilter: filter.NewComparableFilter[T](&filter.BaseFilter[T]{Field: b}),
 		BaseUpdater:      &updater.BaseUpdater[T]{Field: b},
 	}
 }
@@ -153,11 +147,9 @@ type Float32Field = ComputableField[float32]
 type Float64Field = ComputableField[float64]
 type Decimal128Field = ComputableField[bson.Decimal128]
 
-// todo: BinaryField can be ComparableField
-
 type BinaryField struct {
 	*index.BaseKey
-	*filter.BaseFilter[bson.Binary]
+	*filter.ComparableFilter[bson.Binary]
 	*updater.BaseUpdater[bson.Binary]
 }
 
@@ -165,8 +157,8 @@ func NewBinaryField(fName string) *BinaryField {
 	b := &base{fName}
 
 	return &BinaryField{
-		BaseKey:     &index.BaseKey{Field: b},
-		BaseFilter:  &filter.BaseFilter[bson.Binary]{Field: b},
-		BaseUpdater: &updater.BaseUpdater[bson.Binary]{Field: b},
+		BaseKey:          &index.BaseKey{Field: b},
+		ComparableFilter: filter.NewEqualAbleFilter[bson.Binary](&filter.BaseFilter[bson.Binary]{Field: b}),
+		BaseUpdater:      &updater.BaseUpdater[bson.Binary]{Field: b},
 	}
 }

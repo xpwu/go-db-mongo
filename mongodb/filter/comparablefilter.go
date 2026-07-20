@@ -1,6 +1,6 @@
 package filter
 
-type ComparableFilter[T comparable] struct {
+type ComparableFilter[T any] struct {
 	*BaseFilter[T]
 }
 
@@ -42,4 +42,16 @@ func (c *ComparableFilter[T]) In(values []T) Filter {
 
 func (c *ComparableFilter[T]) Nin(values []T) Filter {
 	return New(c, "$nin", values)
+}
+
+func NewComparableFilter[T comparable](base *BaseFilter[T]) *ComparableFilter[T] {
+	return &ComparableFilter[T]{base}
+}
+
+type EqualAble[T EqualAble[T]] interface {
+	Equal(T) bool
+}
+
+func NewEqualAbleFilter[T EqualAble[T]](base *BaseFilter[T]) *ComparableFilter[T] {
+	return &ComparableFilter[T]{base}
 }
