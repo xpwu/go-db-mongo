@@ -1,49 +1,49 @@
 package field
 
 import (
-  "github.com/xpwu/go-db-mongo/mongodb/filter"
-  "github.com/xpwu/go-db-mongo/mongodb/geojson"
-  "github.com/xpwu/go-db-mongo/mongodb/index"
-  "go.mongodb.org/mongo-driver/bson"
+	"github.com/xpwu/go-db-mongo/mongodb/filter"
+	"github.com/xpwu/go-db-mongo/mongodb/geojson"
+	"github.com/xpwu/go-db-mongo/mongodb/index"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type PointFlat struct {
-  name string
+	name string
 }
 
 func (f *PointFlat) FullName() string {
-  return f.name
+	return f.name
 }
 
 func NewFlat(name string) *PointFlat {
-  return &PointFlat{name + ".coordinates"}
+	return &PointFlat{name + ".coordinates"}
 }
 
 func (f *PointFlat) Index() index.Key {
-  return index.NewKey(f, "2d")
+	return index.NewKey(f, "2d")
 }
 
 func (f *PointFlat) GeoWithinBox(bottomLeft, upperRight geojson.Coordinate) filter.Filter {
-  return filter.New(f, "$geoWithin",
-    bson.M{"$box": bson.A{bottomLeft.ToSlice(), upperRight.ToSlice()}})
+	return filter.New(f, "$geoWithin",
+		bson.M{"$box": bson.A{bottomLeft.ToSlice(), upperRight.ToSlice()}})
 }
 
 func (f *PointFlat) GeoWithinPolygon(c1, c2, c3 geojson.Coordinate, cs ...geojson.Coordinate) filter.Filter {
-  all := []geojson.Coordinate{c1, c2, c3}
-  all = append(all, cs...)
+	all := []geojson.Coordinate{c1, c2, c3}
+	all = append(all, cs...)
 
-  ret := make(bson.A, len(all))
+	ret := make(bson.A, len(all))
 
-  for i, a := range all {
-    ret[i] = a.ToSlice()
-  }
+	for i, a := range all {
+		ret[i] = a.ToSlice()
+	}
 
-  return filter.New(f, "$geoWithin", bson.M{"$polygon": ret})
+	return filter.New(f, "$geoWithin", bson.M{"$polygon": ret})
 }
 
 func (f *PointFlat) GeoWithinCircle(center geojson.Coordinate, radiusNoUnit float64) filter.Filter {
-  return filter.New(f, "$geoWithin",
-    bson.M{"$center": bson.A{center.ToSlice(), radiusNoUnit}})
+	return filter.New(f, "$geoWithin",
+		bson.M{"$center": bson.A{center.ToSlice(), radiusNoUnit}})
 }
 
 /**
@@ -75,6 +75,6 @@ func (f *PointFlat) GeoWithinCircle(center geojson.Coordinate, radiusNoUnit floa
  *
  */
 func (f *PointFlat) Near(point geojson.Coordinate, maxDistance float64) filter.Filter {
-  return filter.And(filter.New(f, "$near", point.ToSlice()),
-    filter.New(f, "$maxDistance", maxDistance))
+	return filter.And(filter.New(f, "$near", point.ToSlice()),
+		filter.New(f, "$maxDistance", maxDistance))
 }

@@ -1,44 +1,44 @@
 package field
 
 import (
-  "github.com/xpwu/go-db-mongo/mongodb/filter"
-  "github.com/xpwu/go-db-mongo/mongodb/geojson"
-  "github.com/xpwu/go-db-mongo/mongodb/index"
-  "go.mongodb.org/mongo-driver/bson"
+	"github.com/xpwu/go-db-mongo/mongodb/filter"
+	"github.com/xpwu/go-db-mongo/mongodb/geojson"
+	"github.com/xpwu/go-db-mongo/mongodb/index"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type PointSphere struct {
-  name string
+	name string
 }
 
 func NewSphere(name string) *PointSphere {
-  return &PointSphere{name}
+	return &PointSphere{name}
 }
 
 func (s *PointSphere) FullName() string {
-  return s.name
+	return s.name
 }
 
 func (s *PointSphere) Index() index.Key {
-  return index.NewKey(s, "2dsphere")
+	return index.NewKey(s, "2dsphere")
 }
 
 func (s *PointSphere) GeoWithinPyg(polygon *geojson.Polygon) filter.Filter {
-  return filter.New(s, "$geoWithin", bson.M{"$geometry": polygon})
+	return filter.New(s, "$geoWithin", bson.M{"$geometry": polygon})
 }
 
 func (s *PointSphere) GeoWithinMulPyg(polygon *geojson.MultiPolygon) filter.Filter {
-  return filter.New(s, "$geoWithin", bson.M{"$geometry": polygon})
+	return filter.New(s, "$geoWithin", bson.M{"$geometry": polygon})
 }
 
 func (s *PointSphere) GeoWithinCcwCrs(polygon *geojson.Polygon) filter.Filter {
-  return filter.New(s, "$geoWithin", bson.M{"$geometry": NewCcwCrs(polygon)})
+	return filter.New(s, "$geoWithin", bson.M{"$geometry": NewCcwCrs(polygon)})
 }
 
 // 弧度
 func (s *PointSphere) GeoWithinCircle(center geojson.Coordinate, radians float64) filter.Filter {
-  return filter.New(s, "$geoWithin",
-    bson.M{"$centerSphere": bson.A{center.ToSlice(), radians}})
+	return filter.New(s, "$geoWithin",
+		bson.M{"$centerSphere": bson.A{center.ToSlice(), radians}})
 }
 
 /**
@@ -59,14 +59,14 @@ func (s *PointSphere) GeoWithinCircle(center geojson.Coordinate, radians float64
  */
 
 func (s *PointSphere) Near(point geojson.Point, maxDistance float64, minDistance ...float64) filter.Filter {
-  var value interface{}
-  if len(minDistance) == 0 {
-    value = bson.M{"$geometry": point, "$maxDistance": maxDistance}
-  } else if len(minDistance) == 1 {
-    value = bson.M{"$geometry": point, "$maxDistance": maxDistance, "$minDistance": minDistance[0]}
-  } else {
-    panic("args error")
-  }
+	var value interface{}
+	if len(minDistance) == 0 {
+		value = bson.M{"$geometry": point, "$maxDistance": maxDistance}
+	} else if len(minDistance) == 1 {
+		value = bson.M{"$geometry": point, "$maxDistance": maxDistance, "$minDistance": minDistance[0]}
+	} else {
+		panic("args error")
+	}
 
-  return filter.New(s, "$nearSphere", value)
+	return filter.New(s, "$nearSphere", value)
 }
