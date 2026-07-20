@@ -127,13 +127,13 @@ func NewComparableField[T ~bool | bson.ObjectID](fName string) *ComparableField[
 type BoolField = ComparableField[bool]
 type ObjectIDField = ComparableField[bson.ObjectID]
 
-type ComputableField[T ~float32 | ~float64 | bson.Decimal128] struct {
+type ComputableField[T ~float32 | ~float64] struct {
 	*index.BaseKey
 	*filter.BaseFilter[T]
 	*updater.ComputableUpdater[T]
 }
 
-func NewComputableField[T ~float32 | ~float64 | bson.Decimal128](fName string) *ComputableField[T] {
+func NewComputableField[T ~float32 | ~float64](fName string) *ComputableField[T] {
 	b := &base{fName}
 
 	return &ComputableField[T]{
@@ -145,7 +145,23 @@ func NewComputableField[T ~float32 | ~float64 | bson.Decimal128](fName string) *
 
 type Float32Field = ComputableField[float32]
 type Float64Field = ComputableField[float64]
-type Decimal128Field = ComputableField[bson.Decimal128]
+
+type Decimal128Field struct {
+	*index.BaseKey
+	*filter.ComparableFilter[bson.Decimal128]
+	*updater.ComputableUpdater[bson.Decimal128]
+}
+
+func NewDecimal128Field(fName string) *Decimal128Field {
+	b := &base{fName}
+
+	return &Decimal128Field{
+		BaseKey:          &index.BaseKey{Field: b},
+		ComparableFilter: filter.NewComparableFilter[bson.Decimal128](&filter.BaseFilter[bson.Decimal128]{Field: b}),
+		ComputableUpdater: &updater.ComputableUpdater[bson.Decimal128]{
+			BaseUpdater: &updater.BaseUpdater[bson.Decimal128]{Field: b}},
+	}
+}
 
 type BinaryField struct {
 	*index.BaseKey
