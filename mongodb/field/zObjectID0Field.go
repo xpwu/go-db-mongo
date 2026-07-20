@@ -11,26 +11,26 @@ import (
 
 type ObjectID0F struct {
 	*ObjectID0FUpdaterF
-	*baseKey
+	*BaseKey
 	*ObjectID0FFilterF
 }
 
 func (a *ObjectID0F) FullName() string {
-	return a.baseKey.FullName()
+	return a.BaseKey.FullName()
 }
 
 type ObjectID0FUpdaterF struct {
-	*baseUpdater
+	*BaseUpdater
 }
 
 type ObjectID0FFilterF struct {
-	*baseFilter
+	*BaseFilter
 }
 
 func NewObjectID0F(fName string) *ObjectID0F {
-	uper := &ObjectID0FUpdaterF{&baseUpdater{&base{fName}}}
-	pri := &baseKey{uper.base}
-	flt := &ObjectID0FFilterF{&baseFilter{uper.base}}
+	uper := &ObjectID0FUpdaterF{&BaseUpdater{&base{fName}}}
+	pri := &BaseKey{uper.Base}
+	flt := &ObjectID0FFilterF{&BaseFilter{uper.Base}}
 
 	return &ObjectID0F{uper, pri, flt}
 }

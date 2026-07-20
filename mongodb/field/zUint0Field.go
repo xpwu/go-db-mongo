@@ -10,26 +10,26 @@ import (
 
 type Uint0F struct {
 	*Uint0FUpdaterF
-	*baseKey
+	*BaseKey
 	*Uint0FFilterF
 }
 
 func (a *Uint0F) FullName() string {
-	return a.baseKey.FullName()
+	return a.BaseKey.FullName()
 }
 
 type Uint0FUpdaterF struct {
-	*baseUpdater
+	*BaseUpdater
 }
 
 type Uint0FFilterF struct {
-	*baseFilter
+	*BaseFilter
 }
 
 func NewUint0F(fName string) *Uint0F {
-	uper := &Uint0FUpdaterF{&baseUpdater{&base{fName}}}
-	pri := &baseKey{uper.base}
-	flt := &Uint0FFilterF{&baseFilter{uper.base}}
+	uper := &Uint0FUpdaterF{&BaseUpdater{&base{fName}}}
+	pri := &BaseKey{uper.Base}
+	flt := &Uint0FFilterF{&BaseFilter{uper.Base}}
 
 	return &Uint0F{uper, pri, flt}
 }

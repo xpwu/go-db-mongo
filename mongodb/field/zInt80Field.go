@@ -10,26 +10,26 @@ import (
 
 type Int80F struct {
 	*Int80FUpdaterF
-	*baseKey
+	*BaseKey
 	*Int80FFilterF
 }
 
 func (a *Int80F) FullName() string {
-	return a.baseKey.FullName()
+	return a.BaseKey.FullName()
 }
 
 type Int80FUpdaterF struct {
-	*baseUpdater
+	*BaseUpdater
 }
 
 type Int80FFilterF struct {
-	*baseFilter
+	*BaseFilter
 }
 
 func NewInt80F(fName string) *Int80F {
-	uper := &Int80FUpdaterF{&baseUpdater{&base{fName}}}
-	pri := &baseKey{uper.base}
-	flt := &Int80FFilterF{&baseFilter{uper.base}}
+	uper := &Int80FUpdaterF{&BaseUpdater{&base{fName}}}
+	pri := &BaseKey{uper.Base}
+	flt := &Int80FFilterF{&BaseFilter{uper.Base}}
 
 	return &Int80F{uper, pri, flt}
 }

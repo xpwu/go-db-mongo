@@ -11,26 +11,26 @@ import (
 
 type Binary0F struct {
 	*Binary0FUpdaterF
-	*baseKey
+	*BaseKey
 	*Binary0FFilterF
 }
 
 func (a *Binary0F) FullName() string {
-	return a.baseKey.FullName()
+	return a.BaseKey.FullName()
 }
 
 type Binary0FUpdaterF struct {
-	*baseUpdater
+	*BaseUpdater
 }
 
 type Binary0FFilterF struct {
-	*baseFilter
+	*BaseFilter
 }
 
 func NewBinary0F(fName string) *Binary0F {
-	uper := &Binary0FUpdaterF{&baseUpdater{&base{fName}}}
-	pri := &baseKey{uper.base}
-	flt := &Binary0FFilterF{&baseFilter{uper.base}}
+	uper := &Binary0FUpdaterF{&BaseUpdater{&base{fName}}}
+	pri := &BaseKey{uper.Base}
+	flt := &Binary0FFilterF{&BaseFilter{uper.Base}}
 
 	return &Binary0F{uper, pri, flt}
 }

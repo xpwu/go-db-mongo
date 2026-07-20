@@ -3,33 +3,33 @@ package field
 import "strings"
 
 func StructNext(self, fName string) string {
-  if self == "" {
-    return fName
-  }
-  if fName == "" {
-    return self
-  }
+	if self == "" {
+		return fName
+	}
+	if fName == "" {
+		return self
+	}
 
-  b := strings.Builder{}
-  b.WriteString(self)
-  b.WriteByte('.')
-  b.WriteString(fName)
+	b := strings.Builder{}
+	b.WriteString(self)
+	b.WriteByte('.')
+	b.WriteString(fName)
 
-  return b.String()
+	return b.String()
 }
 
 type StructUpdaterF struct {
-  *baseUpdater
+	*BaseUpdater
 }
 
 func NewStructUpdaterF(name string) *StructUpdaterF {
-  return &StructUpdaterF{&baseUpdater{&base{name:name}}}
+	return &StructUpdaterF{&BaseUpdater{&base{name: name}}}
 }
 
 type StructFilterF struct {
-  *baseFilter
+	*BaseFilter
 }
 
 func NewStructFilterF(name string) *StructFilterF {
-  return &StructFilterF{&baseFilter{&base{name:name}}}
+	return &StructFilterF{&BaseFilter{&base{name: name}}}
 }

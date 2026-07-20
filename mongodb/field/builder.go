@@ -1,222 +1,222 @@
 package field
 
 import (
-  "fmt"
-  "github.com/xpwu/go-db-mongo/mongodb/filter"
-  "github.com/xpwu/go-db-mongo/mongodb/geojson"
-  "github.com/xpwu/go-db-mongo/mongodb/tagparser"
-  "github.com/xpwu/go-db-mongo/mongodb/updater"
-  "os"
-  "path"
-  "reflect"
-  "runtime"
-  "sort"
-  "strings"
-  "text/template"
+	"fmt"
+	"github.com/xpwu/go-db-mongo/mongodb/filter"
+	"github.com/xpwu/go-db-mongo/mongodb/geojson"
+	"github.com/xpwu/go-db-mongo/mongodb/tagparser"
+	"github.com/xpwu/go-db-mongo/mongodb/updater"
+	"os"
+	"path"
+	"reflect"
+	"runtime"
+	"sort"
+	"strings"
+	"text/template"
 )
 
 type Typ interface {
-  Name() string
-  PkgPath() string
+	Name() string
+	PkgPath() string
 }
 
 type rTyp struct {
-  name string
-  pkg  string
+	name string
+	pkg  string
 }
 
 func (r *rTyp) Name() string {
-  return r.name
+	return r.name
 }
 
 func (r *rTyp) PkgPath() string {
-  return r.pkg
+	return r.pkg
 }
 
 func NewTypByFunc(fun interface{}) Typ {
-  name := runtime.FuncForPC(reflect.ValueOf(fun).Pointer()).Name()
-  f := strings.FieldsFunc(name, func(r rune) bool {
-    if r == '.' {
-      return true
-    }
-    return false
-  })
+	name := runtime.FuncForPC(reflect.ValueOf(fun).Pointer()).Name()
+	f := strings.FieldsFunc(name, func(r rune) bool {
+		if r == '.' {
+			return true
+		}
+		return false
+	})
 
-  return &rTyp{pkg: strings.Join(f[:len(f)-1], "."), name: f[len(f)-1]}
+	return &rTyp{pkg: strings.Join(f[:len(f)-1], "."), name: f[len(f)-1]}
 }
 
 // 名字要求：如果存在UpdaterF与FilterF两个类型，则是在本身类型后面加后缀，变量命名同理
 type Type struct {
-  F    Typ
-  NewF Typ
+	F    Typ
+	NewF Typ
 }
 
 type Builder struct {
-  typeMap map[reflect.Type]Type
-  kindMap map[reflect.Kind]func(reflect.Type) (Type, bool)
-  dir     string
-  pkg     string
+	typeMap map[reflect.Type]Type
+	kindMap map[reflect.Kind]func(reflect.Type) (Type, bool)
+	dir     string
+	pkg     string
 }
 
 var (
-  builderR0 = func(b *Builder) {
-  }
+	builderR0 = func(b *Builder) {
+	}
 
-  builderR1 = func(b *Builder) {
-  }
+	builderR1 = func(b *Builder) {
+	}
 )
 
 func New() *Builder {
-  b := &Builder{
-    typeMap: make(map[reflect.Type]Type),
-    kindMap: make(map[reflect.Kind]func(reflect.Type) (Type, bool)),
-  }
+	b := &Builder{
+		typeMap: make(map[reflect.Type]Type),
+		kindMap: make(map[reflect.Kind]func(reflect.Type) (Type, bool)),
+	}
 
-  b.RegisterDefault(reflect.Struct, b.buildStruct).
-    RegisterDefault(reflect.Slice, b.buildSlice).
-    RegisterDefault(reflect.Ptr, b.buildPtr)
+	b.RegisterDefault(reflect.Struct, b.buildStruct).
+		RegisterDefault(reflect.Slice, b.buildSlice).
+		RegisterDefault(reflect.Ptr, b.buildPtr)
 
-  b.RegisterType(reflect.TypeOf(geojson.Point{}), Type{
-      F:    reflect.TypeOf(PointField{}),
-      NewF: NewTypByFunc(NewPointField),
-    }).
-    RegisterType(reflect.TypeOf(geojson.MultiPoint{}), Type{
-      F:    reflect.TypeOf(MultiPointField{}),
-      NewF: NewTypByFunc(NewMultiPointField),
-    }).
-    RegisterType(reflect.TypeOf(geojson.Polygon{}), Type{
-      F:    reflect.TypeOf(PolygonField{}),
-      NewF: NewTypByFunc(NewPointField),
-    }).
-    RegisterType(reflect.TypeOf(geojson.MultiPolygon{}), Type{
-      F:    reflect.TypeOf(MultiPolygonField{}),
-      NewF: NewTypByFunc(NewMultiPolygonField),
-    })
+	b.RegisterType(reflect.TypeOf(geojson.Point{}), Type{
+		F:    reflect.TypeOf(PointField{}),
+		NewF: NewTypByFunc(NewPointField),
+	}).
+		RegisterType(reflect.TypeOf(geojson.MultiPoint{}), Type{
+			F:    reflect.TypeOf(MultiPointField{}),
+			NewF: NewTypByFunc(NewMultiPointField),
+		}).
+		RegisterType(reflect.TypeOf(geojson.Polygon{}), Type{
+			F:    reflect.TypeOf(PolygonField{}),
+			NewF: NewTypByFunc(NewPointField),
+		}).
+		RegisterType(reflect.TypeOf(geojson.MultiPolygon{}), Type{
+			F:    reflect.TypeOf(MultiPolygonField{}),
+			NewF: NewTypByFunc(NewMultiPolygonField),
+		})
 
-  builderR0(b)
-  builderR1(b)
+	builderR0(b)
+	builderR1(b)
 
-  return b
+	return b
 }
 
 func (b *Builder) ClearType(rt reflect.Type) *Builder {
-  delete(b.typeMap, rt)
-  return b
+	delete(b.typeMap, rt)
+	return b
 }
 
 func (b *Builder) RegisterType(rt reflect.Type, ft Type) *Builder {
-  b.typeMap[rt] = ft
-  return b
+	b.typeMap[rt] = ft
+	return b
 }
 
 func (b *Builder) RegisterDefault(k reflect.Kind, f func(rt reflect.Type) (Type, bool)) *Builder {
-  b.kindMap[k] = f
-  return b
+	b.kindMap[k] = f
+	return b
 }
 
 func (b *Builder) build(rt reflect.Type) (ft Type, ok bool) {
-  ft, ok = b.typeMap[rt]
-  if ok {
-    return
-  }
+	ft, ok = b.typeMap[rt]
+	if ok {
+		return
+	}
 
-  f := b.kindMap[rt.Kind()]
-  ft, ok = f(rt)
-  if ok {
-    b.typeMap[rt] = ft
-  }
+	f := b.kindMap[rt.Kind()]
+	ft, ok = f(rt)
+	if ok {
+		b.typeMap[rt] = ft
+	}
 
-  return
+	return
 }
 
 func (b *Builder) Build(rt reflect.Type) {
 
-  if rt.Kind() == reflect.Ptr {
-    rt = rt.Elem()
-  }
+	if rt.Kind() == reflect.Ptr {
+		rt = rt.Elem()
+	}
 
-  b.pkg = rt.PkgPath()
-  if b.pkg == "" {
-    // 基本类型 就取当前的pkg, 基本类型都是预生成在此pkg中
-    // 对于其他pkg为空的类型 暂不支持
-    b.pkg = reflect.TypeOf(b).Elem().PkgPath()
-  }
+	b.pkg = rt.PkgPath()
+	if b.pkg == "" {
+		// 基本类型 就取当前的pkg, 基本类型都是预生成在此pkg中
+		// 对于其他pkg为空的类型 暂不支持
+		b.pkg = reflect.TypeOf(b).Elem().PkgPath()
+	}
 
-  b.build(rt)
+	b.build(rt)
 }
 
 func (b *Builder) buildPtr(t reflect.Type) (ft Type, ok bool) {
-  return b.build(t.Elem())
+	return b.build(t.Elem())
 }
 
 type alias map[string]bool
 
 func (a *alias) get(expect string) string {
-  test := expect
-  num := 1
-  for (*a)[test] {
-    num++
-    test = fmt.Sprintf("%s%d", expect, num)
-  }
-  (*a)[test] = true
+	test := expect
+	num := 1
+	for (*a)[test] {
+		num++
+		test = fmt.Sprintf("%s%d", expect, num)
+	}
+	(*a)[test] = true
 
-  return test
+	return test
 }
 
 type imports struct {
-  data  map[string]string
-  alias alias
-  exc   map[string]bool
+	data  map[string]string
+	alias alias
+	exc   map[string]bool
 }
 
 func newImports() *imports {
-  return &imports{
-    data:  make(map[string]string),
-    alias: alias{},
-    exc:   make(map[string]bool),
-  }
+	return &imports{
+		data:  make(map[string]string),
+		alias: alias{},
+		exc:   make(map[string]bool),
+	}
 }
 
 func (m *imports) exclude(paths string) {
-  m.exc[paths] = true
+	m.exc[paths] = true
 }
 
 func (m *imports) add(paths string) (alias string) {
-  if paths == "" || m.exc[paths] {
-    return ""
-  }
+	if paths == "" || m.exc[paths] {
+		return ""
+	}
 
-  if a, ok := m.data[paths]; ok {
-    return a + "."
-  }
+	if a, ok := m.data[paths]; ok {
+		return a + "."
+	}
 
-  a := m.alias.get(path.Base(paths))
-  m.data[paths] = a
+	a := m.alias.get(path.Base(paths))
+	m.data[paths] = a
 
-  return a + "."
+	return a + "."
 }
 
 type importT struct {
-  Alias  string
-  Import string
+	Alias  string
+	Import string
 }
 
 func (m *imports) all() []importT {
-  ret := make([]importT, len(m.data))
+	ret := make([]importT, len(m.data))
 
-  var keys []string
-  for k := range m.data {
-    keys = append(keys, k)
-  }
-  sort.Strings(keys)
-  for j, k := range keys {
-    ret[j] = importT{
-      Alias:  m.data[k],
-      Import: k,
-    }
-  }
+	var keys []string
+	for k := range m.data {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for j, k := range keys {
+		ret[j] = importT{
+			Alias:  m.data[k],
+			Import: k,
+		}
+	}
 
-  return ret
+	return ret
 }
 
 var sliceCode = template.Must(template.New("sliceCode").Parse(`
@@ -300,72 +300,72 @@ func (i *{{.Name}}) PushByModifier(m {{.UpdaterAlias}}PushModifier, each []{{.El
 `))
 
 func firstUpper(i string) string {
-  if i == "" {
-    return i
-  }
+	if i == "" {
+		return i
+	}
 
-  return strings.ToUpper(i[0:1]) + i[1:]
+	return strings.ToUpper(i[0:1]) + i[1:]
 }
 
 func (b *Builder) buildSlice(t reflect.Type) (ft Type, ok bool) {
-  ele := t.Elem()
-  if ele.Kind() == reflect.Slice {
-    panic(fmt.Errorf("not support [][] type"))
-  }
+	ele := t.Elem()
+	if ele.Kind() == reflect.Slice {
+		panic(fmt.Errorf("not support [][] type"))
+	}
 
-  type st struct {
-    Pkg             string
-    Name            string
-    MongoFieldAlias string
-    Imports         []importT
-    EleName         string
-    EleOnlyName     string
-    EleNameType     string
-    NewEleName      string
-    UpdaterAlias    string
-    FilterAlias     string
-    FmtAlias        string
-    BsonAlias       string
-  }
+	type st struct {
+		Pkg             string
+		Name            string
+		MongoFieldAlias string
+		Imports         []importT
+		EleName         string
+		EleOnlyName     string
+		EleNameType     string
+		NewEleName      string
+		UpdaterAlias    string
+		FilterAlias     string
+		FmtAlias        string
+		BsonAlias       string
+	}
 
-  ft, ok = b.build(ele)
-  if !ok {
-    panic(fmt.Errorf("not support %v", ele))
-  }
+	ft, ok = b.build(ele)
+	if !ok {
+		panic(fmt.Errorf("not support %v", ele))
+	}
 
-  imports := newImports()
-  imports.exclude(b.pkg)
+	imports := newImports()
+	imports.exclude(b.pkg)
 
-  s := &st{
-    Pkg:             path.Base(b.pkg),
-    Name:            firstUpper(ele.Name()) + "1Field",
-    MongoFieldAlias: imports.add(reflect.TypeOf(Array{}).PkgPath()),
-    EleName:         imports.add(ft.F.PkgPath()) + ft.F.Name(),
-    EleOnlyName:     ft.F.Name(),
-    EleNameType:     imports.add(ele.PkgPath()) + ele.Name(),
-    NewEleName:      imports.add(ft.NewF.PkgPath()) + ft.NewF.Name(),
-    UpdaterAlias:    imports.add(reflect.TypeOf((*updater.Updater)(nil)).Elem().PkgPath()),
-    FilterAlias:     imports.add(reflect.TypeOf((*filter.Filter)(nil)).Elem().PkgPath()),
-    FmtAlias:        imports.add("fmt"),
-    BsonAlias:       imports.add("go.mongodb.org/mongo-driver/bson"),
-  }
-  s.Imports = imports.all()
+	s := &st{
+		Pkg:             path.Base(b.pkg),
+		Name:            firstUpper(ele.Name()) + "1Field",
+		MongoFieldAlias: imports.add(reflect.TypeOf(Array{}).PkgPath()),
+		EleName:         imports.add(ft.F.PkgPath()) + ft.F.Name(),
+		EleOnlyName:     ft.F.Name(),
+		EleNameType:     imports.add(ele.PkgPath()) + ele.Name(),
+		NewEleName:      imports.add(ft.NewF.PkgPath()) + ft.NewF.Name(),
+		UpdaterAlias:    imports.add(reflect.TypeOf((*updater.Updater)(nil)).Elem().PkgPath()),
+		FilterAlias:     imports.add(reflect.TypeOf((*filter.Filter)(nil)).Elem().PkgPath()),
+		FmtAlias:        imports.add("fmt"),
+		BsonAlias:       imports.add("go.mongodb.org/mongo-driver/bson"),
+	}
+	s.Imports = imports.all()
 
-  file, err := os.Create("z" + s.Name + ".go")
-  if err != nil {
-    panic(err)
-  }
+	file, err := os.Create("z" + s.Name + ".go")
+	if err != nil {
+		panic(err)
+	}
 
-  err = sliceCode.Execute(file, s)
-  if err != nil {
-    panic(err)
-  }
+	err = sliceCode.Execute(file, s)
+	if err != nil {
+		panic(err)
+	}
 
-  ft = Type{}
-  ft.F = &rTyp{s.Name, b.pkg}
-  ft.NewF = &rTyp{"New" + s.Name, b.pkg}
+	ft = Type{}
+	ft.F = &rTyp{s.Name, b.pkg}
+	ft.NewF = &rTyp{"New" + s.Name, b.pkg}
 
-  return ft, true
+	return ft, true
 }
 
 var structCode = template.Must(template.New("structCode").Parse(`
@@ -434,78 +434,77 @@ func (s *base{{$.Name}}) {{.MethodName}}() *{{.FieldName}} {
 `))
 
 func (b *Builder) buildStruct(t reflect.Type) (ft Type, ok bool) {
-  type Field struct {
-    MethodName string
-    FieldName  string
-    TagName    string
-    New        string
-  }
+	type Field struct {
+		MethodName string
+		FieldName  string
+		TagName    string
+		New        string
+	}
 
-  type st struct {
-    Pkg             string
-    Name            string
-    NextNameM       string
-    MongoFieldAlias string
-    Imports         []importT
-    Fields          []Field
-  }
+	type st struct {
+		Pkg             string
+		Name            string
+		NextNameM       string
+		MongoFieldAlias string
+		Imports         []importT
+		Fields          []Field
+	}
 
-  imports := newImports()
-  imports.exclude(b.pkg)
+	imports := newImports()
+	imports.exclude(b.pkg)
 
-  nextMt := NewTypByFunc(StructNext)
+	nextMt := NewTypByFunc(StructNext)
 
-  s := &st{
-    Pkg:             path.Base(b.pkg),
-    Name:            t.Name() + "0Field",
-    NextNameM:       imports.add(nextMt.PkgPath()) + nextMt.Name(),
-    MongoFieldAlias: imports.add(reflect.TypeOf(StructUpdaterF{}).PkgPath()),
-  }
+	s := &st{
+		Pkg:             path.Base(b.pkg),
+		Name:            t.Name() + "0Field",
+		NextNameM:       imports.add(nextMt.PkgPath()) + nextMt.Name(),
+		MongoFieldAlias: imports.add(reflect.TypeOf(StructUpdaterF{}).PkgPath()),
+	}
 
-  for i := 0; i < t.NumField(); i++ {
-    f := t.Field(i)
-    // unexported
-    if f.PkgPath != "" {
-      continue
-    }
-    tag, _ := tagparser.StructTagParser(f)
-    if tag.Skip {
-      continue
-    }
-    fd := Field{}
-    fd.MethodName = f.Name
-    fd.TagName = tag.Name
-    ft, ok := b.build(f.Type)
-    if !ok {
-      panic(fmt.Errorf("not support %v", f.Type))
-    }
-    fd.FieldName = imports.add(ft.F.PkgPath()) + ft.F.Name()
-    fd.New = imports.add(ft.NewF.PkgPath()) + ft.NewF.Name()
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		// unexported
+		if f.PkgPath != "" {
+			continue
+		}
+		tag, _ := tagparser.StructTagParser(f)
+		if tag.Skip {
+			continue
+		}
+		fd := Field{}
+		fd.MethodName = f.Name
+		fd.TagName = tag.Name
+		ft, ok := b.build(f.Type)
+		if !ok {
+			panic(fmt.Errorf("not support %v", f.Type))
+		}
+		fd.FieldName = imports.add(ft.F.PkgPath()) + ft.F.Name()
+		fd.New = imports.add(ft.NewF.PkgPath()) + ft.NewF.Name()
 
-    // inline 域能进行普通子域访问，但不能有任何操作，也不能在访问路径中添加新的嵌套字段
-    if tag.Inline && f.Type.Kind() == reflect.Struct {
-      fd.TagName = ""
-      fd.New = imports.add(ft.NewF.PkgPath()) + ft.NewF.Name() + "Inline"
-    }
-    s.Fields = append(s.Fields, fd)
-  }
+		// inline 域能进行普通子域访问，但不能有任何操作，也不能在访问路径中添加新的嵌套字段
+		if tag.Inline && f.Type.Kind() == reflect.Struct {
+			fd.TagName = ""
+			fd.New = imports.add(ft.NewF.PkgPath()) + ft.NewF.Name() + "Inline"
+		}
+		s.Fields = append(s.Fields, fd)
+	}
 
-  s.Imports = imports.all()
+	s.Imports = imports.all()
 
-  file, err := os.Create("z" + s.Name + ".go")
-  if err != nil {
-    panic(err)
-  }
+	file, err := os.Create("z" + s.Name + ".go")
+	if err != nil {
+		panic(err)
+	}
 
-  err = structCode.Execute(file, s)
-  if err != nil {
-    panic(err)
-  }
+	err = structCode.Execute(file, s)
+	if err != nil {
+		panic(err)
+	}
 
-  ft = Type{}
-  ft.F = &rTyp{s.Name, b.pkg}
-  ft.NewF = &rTyp{"New" + s.Name, b.pkg}
+	ft = Type{}
+	ft.F = &rTyp{s.Name, b.pkg}
+	ft.NewF = &rTyp{"New" + s.Name, b.pkg}
 
-  return ft, true
+	return ft, true
 }
-

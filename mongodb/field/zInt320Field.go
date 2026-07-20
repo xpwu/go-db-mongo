@@ -10,26 +10,26 @@ import (
 
 type Int320F struct {
 	*Int320FUpdaterF
-	*baseKey
+	*BaseKey
 	*Int320FFilterF
 }
 
 func (a *Int320F) FullName() string {
-	return a.baseKey.FullName()
+	return a.BaseKey.FullName()
 }
 
 type Int320FUpdaterF struct {
-	*baseUpdater
+	*BaseUpdater
 }
 
 type Int320FFilterF struct {
-	*baseFilter
+	*BaseFilter
 }
 
 func NewInt320F(fName string) *Int320F {
-	uper := &Int320FUpdaterF{&baseUpdater{&base{fName}}}
-	pri := &baseKey{uper.base}
-	flt := &Int320FFilterF{&baseFilter{uper.base}}
+	uper := &Int320FUpdaterF{&BaseUpdater{&base{fName}}}
+	pri := &BaseKey{uper.Base}
+	flt := &Int320FFilterF{&BaseFilter{uper.Base}}
 
 	return &Int320F{uper, pri, flt}
 }

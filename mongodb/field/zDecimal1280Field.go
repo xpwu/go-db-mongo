@@ -11,26 +11,26 @@ import (
 
 type Decimal1280F struct {
 	*Decimal1280FUpdaterF
-	*baseKey
+	*BaseKey
 	*Decimal1280FFilterF
 }
 
 func (a *Decimal1280F) FullName() string {
-	return a.baseKey.FullName()
+	return a.BaseKey.FullName()
 }
 
 type Decimal1280FUpdaterF struct {
-	*baseUpdater
+	*BaseUpdater
 }
 
 type Decimal1280FFilterF struct {
-	*baseFilter
+	*BaseFilter
 }
 
 func NewDecimal1280F(fName string) *Decimal1280F {
-	uper := &Decimal1280FUpdaterF{&baseUpdater{&base{fName}}}
-	pri := &baseKey{uper.base}
-	flt := &Decimal1280FFilterF{&baseFilter{uper.base}}
+	uper := &Decimal1280FUpdaterF{&BaseUpdater{&base{fName}}}
+	pri := &BaseKey{uper.Base}
+	flt := &Decimal1280FFilterF{&BaseFilter{uper.Base}}
 
 	return &Decimal1280F{uper, pri, flt}
 }
