@@ -7,7 +7,7 @@ import (
 	filter "github.com/xpwu/go-db-mongo/mongodb/filter"
 	updater "github.com/xpwu/go-db-mongo/mongodb/updater"
 	bson "go.mongodb.org/mongo-driver/v2/bson"
-	primitive "go.mongodb.org/mongo-driver/v2/bson/primitive"
+	primitive "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Binary1Field struct {
