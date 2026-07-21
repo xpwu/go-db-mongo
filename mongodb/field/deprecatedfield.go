@@ -10,14 +10,14 @@ import (
 type (
 	Binary0F         = BinaryField
 	Binary0FUpdaterF = updater.BaseUpdater[bson.Binary]
-	Binary0FFilterF  = filter.Comparable2Filter[bson.Binary]
+	Binary0FFilterF  = filter.ComparableFilter[bson.Binary]
 )
 
 // Deprecated:
 var (
 	_           binary0F               = &Binary0F{}
 	_           binary0FUpdaterF       = &Binary0FUpdaterF{}
-	_           binary0FFilterF        = filter.NewComparable2Filter(&filter.BaseFilter[bson.Binary]{})
+	_           binary0FFilterF        = &Binary0FFilterF{}
 	NewBinary0F func(string) *Binary0F = NewBinaryField
 )
 
