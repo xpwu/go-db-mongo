@@ -5,34 +5,17 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type BaseFilter[T any] struct {
+type BaseFilterField[T any] interface {
 	mongodb.Field
+	BaseFilter[T]
 }
 
-func (b *BaseFilter[T]) Exist() Filter {
-	return Exist(b)
-}
-
-func (b *BaseFilter[T]) NotExist() Filter {
-	return NotExist(b)
-}
-
-func (b *BaseFilter[T]) Type(t bson.Type) Filter {
-	return Type(b, t)
-}
-
-func (b *BaseFilter[T]) Gt(value T) Filter {
-	return CompareByValue(b, GT, value)
-}
-
-func (b *BaseFilter[T]) GtField(f *BaseFilter[T]) Filter {
-	return CompareByValue(b, GT, f)
-}
-
-func (b *BaseFilter[T]) Lt(value T) Filter {
-	return CompareByValue(b, LT, value)
-}
-
-func (b *BaseFilter[T]) LtField(f *BaseFilter[T]) Filter {
-	return CompareByValue(b, LT, f)
+type BaseFilter[T any] interface {
+	Exist() Filter
+	NotExist() Filter
+	Type(t bson.Type) Filter
+	Gt(value T) Filter
+	GtField(f BaseFilterField[T]) Filter
+	Lt(value T) Filter
+	LtField(f BaseFilterField[T]) Filter
 }

@@ -15,10 +15,10 @@ type (
 
 // Deprecated:
 var (
-	_           binary0F               = &Binary0F{}
-	_           binary0FUpdaterF       = &Binary0FUpdaterF{}
-	_           binary0FFilterF        = &Binary0FFilterF{}
-	NewBinary0F func(string) *Binary0F = NewBinaryField
+	_           binary0F              = Binary0F(nil)
+	_           binary0FUpdaterF      = Binary0FUpdaterF(nil)
+	_           binary0FFilterF       = Binary0FFilterF(nil)
+	NewBinary0F func(string) Binary0F = NewBinaryField
 )
 
 // Binary0F

@@ -1,49 +1,35 @@
 package field
 
 import (
+	"github.com/xpwu/go-db-mongo/mongodb"
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
-	"github.com/xpwu/go-db-mongo/mongodb/index"
 	"github.com/xpwu/go-db-mongo/mongodb/updater"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
-
-type base struct {
-	name string
-}
-
-func (b *base) FullName() string {
-	return b.name
-}
 
 type Integer interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
 	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
 }
 
-type IntegerFieldFilter[T Integer] struct {
-	*filter.ComparableFilter[T]
+type IntegerFilter[T Integer] interface {
+	filter.ComparableFilter[T]
+	Mod(divisor, remainder T) filter.Filter
 }
 
-func (i *IntegerFieldFilter[T]) Mod(divisor, remainder T) filter.Filter {
-	return filter.New(i, "$mod", bson.A{divisor, remainder})
+// IntegerField todo *index.BaseKey
+type IntegerField[T Integer] interface {
+	mongodb.Field
+	IntegerFilter[T]
+	updater.ComputableUpdater[T]
 }
 
-type IntegerField[T Integer] struct {
-	*index.BaseKey
-	*IntegerFieldFilter[T]
-	*updater.ComputableUpdater[T]
+func (b *baseField[T]) Mod(divisor, remainder T) filter.Filter {
+	return filter.New(b, "$mod", bson.A{divisor, remainder})
 }
 
-func NewIntegerField[T Integer](fName string) *IntegerField[T] {
-	b := &base{fName}
-	flt := &IntegerFieldFilter[T]{
-		ComparableFilter: filter.NewComparableFilter[T](&filter.BaseFilter[T]{Field: b})}
-
-	return &IntegerField[T]{
-		BaseKey:            &index.BaseKey{Field: b},
-		IntegerFieldFilter: flt,
-		ComputableUpdater:  &updater.ComputableUpdater[T]{BaseUpdater: &updater.BaseUpdater[T]{Field: b}},
-	}
+func NewIntegerField[T Integer](name string) IntegerField[T] {
+	return &baseField[T]{name}
 }
 
 type IntField = IntegerField[int]
@@ -56,23 +42,24 @@ type UnInteger interface {
 	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
 }
 
-type UnIntegerField[T UnInteger] struct {
-	*index.BaseKey
-	*IntegerFieldFilter[T]
-	*updater.UnsignedComputableUpdater[T]
+// UnIntegerField todo *index.BaseKey
+type UnIntegerField[T UnInteger] interface {
+	mongodb.Field
+	IntegerFilter[T]
+	updater.UnsignedComputableUpdater[T]
 }
 
-func NewUnIntegerField[T UnInteger](fName string) *UnIntegerField[T] {
-	b := &base{fName}
-	flt := &IntegerFieldFilter[T]{
-		ComparableFilter: filter.NewComparableFilter[T](&filter.BaseFilter[T]{Field: b})}
-	c := &updater.ComputableUpdater[T]{BaseUpdater: &updater.BaseUpdater[T]{Field: b}}
+type unIntegerField[T UnInteger] struct {
+	baseField[T]
+}
 
-	return &UnIntegerField[T]{
-		BaseKey:                   &index.BaseKey{Field: b},
-		IntegerFieldFilter:        flt,
-		UnsignedComputableUpdater: &updater.UnsignedComputableUpdater[T]{ComputableUpdater: c},
-	}
+// Dec finalValue = T(nowValue - num) or finalValue = T(-value) (if nowValue is Not exist)
+func (u *unIntegerField[T]) Dec(num T) updater.Updater {
+	return updater.New(u, "$inc", -num)
+}
+
+func NewUnIntegerField[T UnInteger](name string) UnIntegerField[T] {
+	return &unIntegerField[T]{baseField[T]{name}}
 }
 
 type UintField = UnIntegerField[uint]
@@ -82,99 +69,76 @@ type Uint16Field = UnIntegerField[uint16]
 type Uint32Field = UnIntegerField[uint32]
 type Uint64Field = UnIntegerField[uint64]
 
-type StringField struct {
-	*index.BaseKey
-	*StringFieldFilter
-	*updater.BaseUpdater[string]
+type StringFilter interface {
+	Regex(regex bson.Regex) filter.Filter
+	filter.ComparableFilter[string]
 }
 
-type StringFieldFilter struct {
-	*filter.ComparableFilter[string]
+// StringField todo *index.BaseKey
+type StringField interface {
+	mongodb.Field
+	StringFilter
+	updater.BaseUpdater[string]
 }
 
-func (s *StringFieldFilter) Regex(regex bson.Regex) filter.Filter {
+type stringField struct {
+	baseField[string]
+}
+
+func (s *stringField) Regex(regex bson.Regex) filter.Filter {
 	return filter.New(s, "$regex", regex)
 }
 
-func NewStringField(fName string) *StringField {
-	b := &base{fName}
-	flt := &StringFieldFilter{
-		ComparableFilter: filter.NewComparableFilter[string](&filter.BaseFilter[string]{Field: b})}
-
-	return &StringField{
-		BaseKey:           &index.BaseKey{Field: b},
-		StringFieldFilter: flt,
-		BaseUpdater:       &updater.BaseUpdater[string]{Field: b},
-	}
+func NewStringField(name string) StringField {
+	return &stringField{baseField[string]{name}}
 }
 
-type ComparableField[T ~bool | bson.ObjectID] struct {
-	*index.BaseKey
-	*filter.ComparableFilter[T]
-	*updater.BaseUpdater[T]
+// ComparableField todo *index.BaseKey
+type ComparableField[T ~bool | bson.ObjectID] interface {
+	mongodb.Field
+	filter.ComparableFilter[T]
+	updater.BaseUpdater[T]
 }
 
-func NewComparableField[T ~bool | bson.ObjectID](fName string) *ComparableField[T] {
-	b := &base{fName}
-
-	return &ComparableField[T]{
-		BaseKey:          &index.BaseKey{Field: b},
-		ComparableFilter: filter.NewComparableFilter[T](&filter.BaseFilter[T]{Field: b}),
-		BaseUpdater:      &updater.BaseUpdater[T]{Field: b},
-	}
+func NewComparableField[T ~bool | bson.ObjectID](name string) ComparableField[T] {
+	return &baseField[T]{name}
 }
 
 type BoolField = ComparableField[bool]
 type ObjectIDField = ComparableField[bson.ObjectID]
 
-type ComputableField[T ~float32 | ~float64] struct {
-	*index.BaseKey
-	*filter.BaseFilter[T]
-	*updater.ComputableUpdater[T]
+// ComputableField todo *index.BaseKey
+type ComputableField[T ~float32 | ~float64] interface {
+	mongodb.Field
+	filter.BaseFilter[T]
+	updater.ComputableUpdater[T]
 }
 
-func NewComputableField[T ~float32 | ~float64](fName string) *ComputableField[T] {
-	b := &base{fName}
-
-	return &ComputableField[T]{
-		BaseKey:           &index.BaseKey{Field: b},
-		BaseFilter:        &filter.BaseFilter[T]{Field: b},
-		ComputableUpdater: &updater.ComputableUpdater[T]{BaseUpdater: &updater.BaseUpdater[T]{Field: b}},
-	}
+func NewComputableField[T ~float32 | ~float64](name string) ComputableField[T] {
+	return &baseField[T]{name}
 }
 
 type Float32Field = ComputableField[float32]
 type Float64Field = ComputableField[float64]
 
-type Decimal128Field struct {
-	*index.BaseKey
-	*filter.ComparableFilter[bson.Decimal128]
-	*updater.ComputableUpdater[bson.Decimal128]
+// Decimal128Field todo *index.BaseKey
+type Decimal128Field interface {
+	mongodb.Field
+	filter.ComparableFilter[bson.Decimal128]
+	updater.ComputableUpdater[bson.Decimal128]
 }
 
-func NewDecimal128Field(fName string) *Decimal128Field {
-	b := &base{fName}
-
-	return &Decimal128Field{
-		BaseKey:          &index.BaseKey{Field: b},
-		ComparableFilter: filter.NewComparableFilter[bson.Decimal128](&filter.BaseFilter[bson.Decimal128]{Field: b}),
-		ComputableUpdater: &updater.ComputableUpdater[bson.Decimal128]{
-			BaseUpdater: &updater.BaseUpdater[bson.Decimal128]{Field: b}},
-	}
+func NewDecimal128Field(name string) Decimal128Field {
+	return &baseField[bson.Decimal128]{name}
 }
 
-type BinaryField struct {
-	*index.BaseKey
-	*filter.ComparableFilter[bson.Binary]
-	*updater.BaseUpdater[bson.Binary]
+// BinaryField todo *index.BaseKey
+type BinaryField interface {
+	mongodb.Field
+	filter.ComparableFilter[bson.Binary]
+	updater.BaseUpdater[bson.Binary]
 }
 
-func NewBinaryField(fName string) *BinaryField {
-	b := &base{fName}
-
-	return &BinaryField{
-		BaseKey:          &index.BaseKey{Field: b},
-		ComparableFilter: filter.NewEqualAbleFilter[bson.Binary](&filter.BaseFilter[bson.Binary]{Field: b}),
-		BaseUpdater:      &updater.BaseUpdater[bson.Binary]{Field: b},
-	}
+func NewBinaryField(name string) BinaryField {
+	return &baseField[bson.Binary]{name}
 }

@@ -1,57 +1,27 @@
 package filter
 
-type ComparableFilter[T any] struct {
-	*BaseFilter[T]
+import "github.com/xpwu/go-db-mongo/mongodb"
+
+type ComparableFilterField[T any] interface {
+	mongodb.Field
+	ComparableFilter[T]
 }
 
-func (c *ComparableFilter[T]) Eq(value T) Filter {
-	return CompareByValue(c, EQ, value)
-}
-
-func (c *ComparableFilter[T]) EqField(f *ComparableFilter[T]) Filter {
-	return CompareByField(c, EQ, f)
-}
-
-func (c *ComparableFilter[T]) Ne(value T) Filter {
-	return CompareByValue(c, NE, value)
-}
-
-func (c *ComparableFilter[T]) NeField(f *ComparableFilter[T]) Filter {
-	return CompareByField(c, NE, f)
-}
-
-func (c *ComparableFilter[T]) Gte(value T) Filter {
-	return CompareByValue(c, GTE, value)
-}
-
-func (c *ComparableFilter[T]) GteField(f *ComparableFilter[T]) Filter {
-	return CompareByValue(c, GTE, f)
-}
-
-func (c *ComparableFilter[T]) Lte(value T) Filter {
-	return CompareByValue(c, LTE, value)
-}
-
-func (c *ComparableFilter[T]) LteField(f *ComparableFilter[T]) Filter {
-	return CompareByValue(c, LTE, f)
-}
-
-func (c *ComparableFilter[T]) In(values []T) Filter {
-	return New(c, "$in", values)
-}
-
-func (c *ComparableFilter[T]) Nin(values []T) Filter {
-	return New(c, "$nin", values)
-}
-
-func NewComparableFilter[T comparable](base *BaseFilter[T]) *ComparableFilter[T] {
-	return &ComparableFilter[T]{base}
+// ComparableFilter T ~ comparable | EqualAble
+type ComparableFilter[T any] interface {
+	BaseFilter[T]
+	Eq(value T) Filter
+	EqField(f ComparableFilterField[T]) Filter
+	Ne(value T) Filter
+	NeField(f ComparableFilterField[T]) Filter
+	Gte(value T) Filter
+	GteField(f ComparableFilterField[T]) Filter
+	Lte(value T) Filter
+	LteField(f ComparableFilterField[T]) Filter
+	In(values []T) Filter
+	Nin(values []T) Filter
 }
 
 type EqualAble[T EqualAble[T]] interface {
 	Equal(T) bool
-}
-
-func NewEqualAbleFilter[T EqualAble[T]](base *BaseFilter[T]) *ComparableFilter[T] {
-	return &ComparableFilter[T]{base}
 }
