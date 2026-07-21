@@ -27,7 +27,7 @@ type Int640FFilterF struct {
 }
 
 func NewInt640F(fName string) *Int640F {
-	uper := &Int640FUpdaterF{&BaseUpdater{&base{fName}}}
+	uper := &Int640FUpdaterF{&BaseUpdater{&baseField{fName}}}
 	pri := &BaseKey{uper.Base}
 	flt := &Int640FFilterF{&BaseFilter{uper.Base}}
 

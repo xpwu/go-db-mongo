@@ -5,6 +5,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+// todo: With the exception of the _id field, you cannot combine inclusion and exclusion statements in projection documents.
+
 type P bson.M
 
 const (

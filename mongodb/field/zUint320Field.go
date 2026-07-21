@@ -27,7 +27,7 @@ type Uint320FFilterF struct {
 }
 
 func NewUint320F(fName string) *Uint320F {
-	uper := &Uint320FUpdaterF{&BaseUpdater{&base{fName}}}
+	uper := &Uint320FUpdaterF{&BaseUpdater{&baseField{fName}}}
 	pri := &BaseKey{uper.Base}
 	flt := &Uint320FFilterF{&BaseFilter{uper.Base}}
 

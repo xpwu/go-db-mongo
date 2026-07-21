@@ -26,7 +26,7 @@ type Bool0FFilterF struct {
 }
 
 func NewBool0F(fName string) *Bool0F {
-	uper := &Bool0FUpdaterF{&BaseUpdater{&base{fName}}}
+	uper := &Bool0FUpdaterF{&BaseUpdater{&baseField{fName}}}
 	pri := &BaseKey{uper.Base}
 	flt := &Bool0FFilterF{&BaseFilter{uper.Base}}
 

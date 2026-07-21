@@ -37,7 +37,7 @@ func (a *Array) Size(sz int) filter.Filter {
 }
 
 func NewArray(fName string) *Array {
-	b := &base{name: fName}
+	b := &baseField{name: fName}
 
 	return &Array{&BaseFilter{b},
 		&BaseUpdater{b},

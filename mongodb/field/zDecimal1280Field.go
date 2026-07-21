@@ -28,7 +28,7 @@ type Decimal1280FFilterF struct {
 }
 
 func NewDecimal1280F(fName string) *Decimal1280F {
-	uper := &Decimal1280FUpdaterF{&BaseUpdater{&base{fName}}}
+	uper := &Decimal1280FUpdaterF{&BaseUpdater{&baseField{fName}}}
 	pri := &BaseKey{uper.Base}
 	flt := &Decimal1280FFilterF{&BaseFilter{uper.Base}}
 

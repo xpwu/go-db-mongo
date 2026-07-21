@@ -49,6 +49,10 @@ func Position(pos int) Option {
 	}
 }
 
+// Slice
+// n == 0 To update the array <field> to an empty array.
+// n < 0 To update the array <field> to contain only the last <num> elements.
+// n > 0  To update the array <field> contain only the first <num> elements.
 func Slice(n int) Option {
 	return func(p *PushModifier) {
 		p.slice = &n

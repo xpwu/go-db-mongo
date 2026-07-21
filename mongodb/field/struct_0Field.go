@@ -23,7 +23,7 @@ type StructUpdaterF struct {
 }
 
 func NewStructUpdaterF(name string) *StructUpdaterF {
-	return &StructUpdaterF{&BaseUpdater{&base{name: name}}}
+	return &StructUpdaterF{&BaseUpdater{&baseField{name: name}}}
 }
 
 type StructFilterF struct {
@@ -31,5 +31,5 @@ type StructFilterF struct {
 }
 
 func NewStructFilterF(name string) *StructFilterF {
-	return &StructFilterF{&BaseFilter{&base{name: name}}}
+	return &StructFilterF{&BaseFilter{&baseField{name: name}}}
 }

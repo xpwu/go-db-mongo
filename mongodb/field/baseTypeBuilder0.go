@@ -37,9 +37,9 @@ type {{.FType}}0FFilterF struct {
 }
 
 func New{{.FType}}0F(fName string) *{{.FType}}0F {
-  uper := &{{.FType}}0FUpdaterF{&BaseUpdater{&base{fName}}}
-  pri := &BaseKey{uper.base}
-  flt := &{{.FType}}0FFilterF{&BaseFilter{uper.base}}
+  uper := &{{.FType}}0FUpdaterF{&BaseUpdater{&baseField{fName}}}
+  pri := &BaseKey{uper.baseField}
+  flt := &{{.FType}}0FFilterF{&BaseFilter{uper.baseField}}
 
   return &{{.FType}}0F{uper, pri, flt}
 }

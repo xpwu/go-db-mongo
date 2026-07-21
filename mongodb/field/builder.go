@@ -378,7 +378,7 @@ import ({{range .Imports}}
 {{end}})
 
 type {{.Name}}UpdaterF struct {
-  *base{{.Name}}
+  *baseField{{.Name}}
   *{{.MongoFieldAlias}}StructUpdaterF
 }
 
@@ -387,7 +387,7 @@ func (s *{{.Name}}UpdaterF) FullName() string {
 }
 
 type {{.Name}}FilterF struct {
-  *base{{.Name}}
+  *baseField{{.Name}}
   *{{.MongoFieldAlias}}StructFilterF
 }
 
@@ -396,37 +396,37 @@ func (s *{{.Name}}FilterF) FullName() string {
 }
 
 type {{.Name}} struct {
-  *base{{.Name}}
+  *baseField{{.Name}}
   {{.Name}}UpdaterF  *{{.Name}}UpdaterF
   {{.Name}}FilterF   *{{.Name}}FilterF
 }
 
 func New{{.Name}}(fName string) *{{.Name}} {
-  base := &base{{.Name}}{fName}
+  baseField := &baseField{{.Name}}{fName}
   // 没有name时，不能做updater与filter操作，比如最顶层的Struct
   if fName == "" {
-    return &{{.Name}} {base{{.Name}}:base}
+    return &{{.Name}} {baseField{{.Name}}:baseField}
   }
-  up := &{{.Name}}UpdaterF{base, {{.MongoFieldAlias}}NewStructUpdaterF(fName)}
-  fl := &{{.Name}}FilterF{base, {{.MongoFieldAlias}}NewStructFilterF(fName)}
+  up := &{{.Name}}UpdaterF{baseField, {{.MongoFieldAlias}}NewStructUpdaterF(fName)}
+  fl := &{{.Name}}FilterF{baseField, {{.MongoFieldAlias}}NewStructFilterF(fName)}
 
-  return &{{.Name}} {base, up, fl}
+  return &{{.Name}} {baseField, up, fl}
 }
 
 // 对应于 bson struct 中的 inline 修饰符
 func New{{.Name}}Inline(fName string) *{{.Name}} {
-  return &{{.Name}} {base{{.Name}}: &base{{.Name}}{fName}}
+  return &{{.Name}} {baseField{{.Name}}: &baseField{{.Name}}{fName}}
 }
 
 func (s *{{.Name}}) FullName() string {
   return s.name
 }
 
-type base{{.Name}} struct {
+type baseField{{.Name}} struct {
   name      string
 }
 {{range .Fields}}
-func (s *base{{$.Name}}) {{.MethodName}}() *{{.FieldName}} {
+func (s *baseField{{$.Name}}) {{.MethodName}}() *{{.FieldName}} {
   n := {{$.NextNameM}}(s.name, "{{.TagName}}")
   return {{.New}}(n)
 }

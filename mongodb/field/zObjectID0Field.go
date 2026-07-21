@@ -28,7 +28,7 @@ type ObjectID0FFilterF struct {
 }
 
 func NewObjectID0F(fName string) *ObjectID0F {
-	uper := &ObjectID0FUpdaterF{&BaseUpdater{&base{fName}}}
+	uper := &ObjectID0FUpdaterF{&BaseUpdater{&baseField{fName}}}
 	pri := &BaseKey{uper.Base}
 	flt := &ObjectID0FFilterF{&BaseFilter{uper.Base}}
 

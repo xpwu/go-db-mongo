@@ -27,7 +27,7 @@ type Uint0FFilterF struct {
 }
 
 func NewUint0F(fName string) *Uint0F {
-	uper := &Uint0FUpdaterF{&BaseUpdater{&base{fName}}}
+	uper := &Uint0FUpdaterF{&BaseUpdater{&baseField{fName}}}
 	pri := &BaseKey{uper.Base}
 	flt := &Uint0FFilterF{&BaseFilter{uper.Base}}
 

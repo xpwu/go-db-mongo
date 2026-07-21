@@ -26,7 +26,7 @@ type Float640FFilterF struct {
 }
 
 func NewFloat640F(fName string) *Float640F {
-	uper := &Float640FUpdaterF{&BaseUpdater{&base{fName}}}
+	uper := &Float640FUpdaterF{&BaseUpdater{&baseField{fName}}}
 	pri := &BaseKey{uper.Base}
 	flt := &Float640FFilterF{&BaseFilter{uper.Base}}
 

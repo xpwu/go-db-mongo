@@ -1,21 +1,21 @@
 package field
 
 type Geo struct {
-	*base
+	*baseField
 	*BaseUpdater
 	*BaseFilter
 }
 
 func NewGeo(name string) *Geo {
 	ret := &Geo{
-		base: &base{name: name},
+		baseField: &baseField{name: name},
 	}
-	ret.BaseFilter = &BaseFilter{ret.base}
-	ret.BaseUpdater = &BaseUpdater{ret.base}
+	ret.BaseFilter = &BaseFilter{ret.baseField}
+	ret.BaseUpdater = &BaseUpdater{ret.baseField}
 
 	return ret
 }
 
 func (g *Geo) FullName() string {
-	return g.base.FullName()
+	return g.baseField.FullName()
 }

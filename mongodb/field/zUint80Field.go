@@ -27,7 +27,7 @@ type Uint80FFilterF struct {
 }
 
 func NewUint80F(fName string) *Uint80F {
-	uper := &Uint80FUpdaterF{&BaseUpdater{&base{fName}}}
+	uper := &Uint80FUpdaterF{&BaseUpdater{&baseField{fName}}}
 	pri := &BaseKey{uper.Base}
 	flt := &Uint80FFilterF{&BaseFilter{uper.Base}}
 
