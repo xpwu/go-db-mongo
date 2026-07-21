@@ -1,5 +1,6 @@
 package mongodb
 
 type Field interface {
-  FullName() string
+	FullName() string
+	InitName(name string)
 }

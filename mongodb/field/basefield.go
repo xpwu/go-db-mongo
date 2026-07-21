@@ -14,6 +14,10 @@ func (b *baseField[T]) FullName() string {
 	return b.name
 }
 
+func (b *baseField[T]) InitName(name string) {
+	b.name = name
+}
+
 func (b *baseField[T]) Exist() filter.Filter {
 	return filter.Exist(b)
 }
