@@ -21,7 +21,7 @@ type IntegerFilter[T Integer] interface {
 type IntegerField[T Integer] interface {
 	mongodb.Field
 	IntegerFilter[T]
-	updater.ComputableUpdater[T]
+	updater.ComputableUpdater[T, T]
 }
 
 func (b *baseField[T]) Mod(divisor, remainder T) filter.Filter {
@@ -38,36 +38,52 @@ type Int16Field = IntegerField[int16]
 type Int32Field = IntegerField[int32]
 type Int64Field = IntegerField[int64]
 
+var (
+	NewIntField   = NewIntegerField[int]
+	NewInt8Field  = NewIntegerField[int]
+	NewInt16Field = NewIntegerField[int]
+	NewInt32Field = NewIntegerField[int]
+	NewInt64Field = NewIntegerField[int]
+)
+
 type UnInteger interface {
 	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
 }
 
 // UnIntegerField todo *index.BaseKey
-type UnIntegerField[T UnInteger] interface {
+type UnIntegerField[T UnInteger, VT Integer] interface {
 	mongodb.Field
 	IntegerFilter[T]
-	updater.UnsignedComputableUpdater[T]
+	updater.ComputableUpdater[T, VT]
 }
 
-type unIntegerField[T UnInteger] struct {
+type unIntegerField[T UnInteger, VT Integer] struct {
 	baseField[T]
 }
 
-// Dec finalValue = T(nowValue - num) or finalValue = T(-value) (if nowValue is Not exist)
-func (u *unIntegerField[T]) Dec(num T) updater.Updater {
-	return updater.New(u, "$inc", -num)
+func (u *unIntegerField[T, VT]) Inc(num VT) updater.Updater {
+	return updater.New(u, "$inc", num)
 }
 
-func NewUnIntegerField[T UnInteger](name string) UnIntegerField[T] {
-	return &unIntegerField[T]{baseField[T]{name}}
+func NewUnIntegerField[T UnInteger, VT Integer](name string) UnIntegerField[T, VT] {
+	return &unIntegerField[T, VT]{baseField[T]{name}}
 }
 
-type UintField = UnIntegerField[uint]
-type ByteField = UnIntegerField[byte]
-type Uint8Field = UnIntegerField[uint8]
-type Uint16Field = UnIntegerField[uint16]
-type Uint32Field = UnIntegerField[uint32]
-type Uint64Field = UnIntegerField[uint64]
+type UintField = UnIntegerField[uint, int]
+type ByteField = UnIntegerField[byte, int8]
+type Uint8Field = UnIntegerField[uint8, int8]
+type Uint16Field = UnIntegerField[uint16, int16]
+type Uint32Field = UnIntegerField[uint32, int32]
+type Uint64Field = UnIntegerField[uint64, int64]
+
+var (
+	NewUintField   = NewUnIntegerField[uint, int]
+	NewByteField   = NewUnIntegerField[byte, int8]
+	NewUint8Field  = NewUnIntegerField[uint8, int8]
+	NewUint16Field = NewUnIntegerField[uint16, int16]
+	NewUint32Field = NewUnIntegerField[uint32, int32]
+	NewUint64Field = NewUnIntegerField[uint64, int64]
+)
 
 type StringFilter interface {
 	Regex(regex bson.Regex) filter.Filter
@@ -107,11 +123,16 @@ func NewComparableField[T ~bool | bson.ObjectID](name string) ComparableField[T]
 type BoolField = ComparableField[bool]
 type ObjectIDField = ComparableField[bson.ObjectID]
 
+var (
+	NewBoolField     = NewComparableField[bool]
+	NewObjectIDField = NewComparableField[bson.ObjectID]
+)
+
 // ComputableField todo *index.BaseKey
 type ComputableField[T ~float32 | ~float64] interface {
 	mongodb.Field
 	filter.BaseFilter[T]
-	updater.ComputableUpdater[T]
+	updater.ComputableUpdater[T, T]
 }
 
 func NewComputableField[T ~float32 | ~float64](name string) ComputableField[T] {
@@ -121,11 +142,16 @@ func NewComputableField[T ~float32 | ~float64](name string) ComputableField[T] {
 type Float32Field = ComputableField[float32]
 type Float64Field = ComputableField[float64]
 
+var (
+	NewFloat32Field = NewComputableField[float32]
+	NewFloat64Field = NewComputableField[float64]
+)
+
 // Decimal128Field todo *index.BaseKey
 type Decimal128Field interface {
 	mongodb.Field
 	filter.ComparableFilter[bson.Decimal128]
-	updater.ComputableUpdater[bson.Decimal128]
+	updater.ComputableUpdater[bson.Decimal128, bson.Decimal128]
 }
 
 func NewDecimal128Field(name string) Decimal128Field {
