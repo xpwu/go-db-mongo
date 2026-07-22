@@ -8,8 +8,9 @@ import (
 )
 
 type ArrayBaseFilter[T any] interface {
-	filter.BaseFilter[T]
+	filter.BaseFilter[[]T]
 	Size(sz int) filter.Filter
+	Include(values []T) filter.Filter
 }
 
 type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
@@ -20,8 +21,8 @@ type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
 	// $addToSet
 	AddIfNotExist(value T) updater.Updater
 	AddEachIfNotExist(values []T) updater.Updater
-	RemoveBy(func(elemField *ElemField) filter.Filter) updater.Updater
-	Push(values []T, f func(elemField *ElemField) updater.PushModifier) updater.Updater
+	RemoveBy(func(elem *ElemField) filter.Filter) updater.Updater
+	Push(values []T, f func(elem *ElemField) updater.PushModifier) updater.Updater
 }
 
 //type ValueComparableField[T any] interface {
@@ -46,6 +47,7 @@ type ArrayComparableUpdater[T comparable, ElemField mongodb.Field] interface {
 
 type arrayBaseField[T any, ElemField mongodb.Field] struct {
 	baseField[[]T]
+	newElemField func(name string) *ElemField
 }
 
 func (a *arrayBaseField[T, ElemField]) Size(sz int) filter.Filter {
@@ -78,19 +80,15 @@ func (a *arrayBaseField[T, ElemField]) Remove(value T) updater.Updater {
 	return updater.New(a, "$pull", value)
 }
 
-func (a *arrayBaseField[T, ElemField]) RemoveBy(f func(elemField *ElemField) filter.Filter) updater.Updater {
-	var elemF ElemField
-	elemF.InitName("")
-	fil := f(&elemF)
+func (a *arrayBaseField[T, ElemField]) RemoveBy(f func(elem *ElemField) filter.Filter) updater.Updater {
+	fil := f(a.newElemField(""))
 	return updater.PullByFilter(a, fil)
 }
 
 func (a *arrayBaseField[T, ElemField]) Push(values []T,
-	f func(elemField *ElemField) updater.PushModifier) updater.Updater {
-	
-	var elemF ElemField
-	elemF.InitName("")
-	return updater.PushByModifier(a, f(&elemF), values)
+	f func(elem *ElemField) updater.PushModifier) updater.Updater {
+
+	return updater.PushByModifier(a, f(a.newElemField("")), values)
 }
 
 /**
