@@ -7,10 +7,16 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type ArrayBaseFilter[T any] interface {
+type ArrayBaseFilter[T any, ElemField mongodb.Field] interface {
 	filter.BaseFilter[[]T]
 	Size(sz int) filter.Filter
 	Include(values []T) filter.Filter
+	// AnyElem Any elements can satisfy different conditions, or the same element can satisfy all
+	AnyElem(f func(anyElem *ElemField) filter.Filter) filter.Filter
+	// SameElem Must be the same element satisfying all conditions
+	SameElem(f func(theOne *ElemField) filter.Filter) filter.Filter
+	// At Element at a fixed index must satisfy all conditions
+	At(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter
 }
 
 type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
