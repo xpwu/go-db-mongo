@@ -1,6 +1,7 @@
 package field
 
 import (
+	"fmt"
 	"github.com/xpwu/go-db-mongo/mongodb"
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
 	"github.com/xpwu/go-db-mongo/mongodb/updater"
@@ -10,13 +11,23 @@ import (
 type ArrayBaseFilter[T any, ElemField mongodb.Field] interface {
 	filter.BaseFilter[[]T]
 	Size(sz int) filter.Filter
-	Include(values []T) filter.Filter
-	// AnyElem Any elements can satisfy different conditions, or the same element can satisfy all
-	AnyElem(f func(anyElem *ElemField) filter.Filter) filter.Filter
-	// SameElem Must be the same element satisfying all conditions
-	SameElem(f func(theOne *ElemField) filter.Filter) filter.Filter
-	// At Element at a fixed index must satisfy all conditions
-	At(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter
+	// AnyElemMeet Different elements can satisfy different conditions, or a single element can satisfy all conditions.
+	// NOTE THAT: If using a negation operator, such as $ne, $not, or $nin, 'anyElem' is 'AllElem'.
+	// In other words, none of elem meets the positive operator (the counterpart of the negation operator).
+	AnyElemMeet(f func(anyElem *ElemField) filter.Filter) filter.Filter
+	// SameElemMeet Must be the same element satisfying all conditions.
+	// NOTE THAT: If using a negation operator, such as $ne, $not, or $nin, 'theOne' is 'someOne'.
+	// So that means if some element of the array meets the negation operator, the document is selected.
+	// In other words, not all elem meets the positive operator (the counterpart of the negation operator).
+	SameElemMeet(f func(theOne *ElemField) filter.Filter) filter.Filter
+	// PosElemMeet Element at a fixed index must satisfy all conditions
+	PosElemMeet(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter
+}
+
+type ArrayComparableFilter[T comparable, ElemField mongodb.Field] interface {
+	ArrayBaseFilter[T, ElemField]
+
+	IncludeAll(values []T) filter.Filter
 }
 
 type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
@@ -31,22 +42,10 @@ type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
 	Push(values []T, f func(elem *ElemField) updater.PushModifier) updater.Updater
 }
 
-//type ValueComparableField[T any] interface {
-//	mongodb.Field
-//	Eq(value T) filter.Filter
-//	Gte(value T) filter.Filter
-//	Lte(value T) filter.Filter
-//	In(values []T) filter.Filter
-//	Gt(value T) filter.Filter
-//	Lt(value T) filter.Filter
-//}
-
 type ArrayComparableUpdater[T comparable, ElemField mongodb.Field] interface {
 	ArrayBaseUpdater[T, ElemField]
 
-	// Remove: remove all db value in the array, where the values meet the condition
-	// $pull or $pullAll
-
+	// RemoveAll: remove all db value in the array, where the values meet the condition
 	RemoveAll(value []T) updater.Updater
 	Remove(value T) updater.Updater
 }
@@ -97,6 +96,31 @@ func (a *arrayBaseField[T, ElemField]) Push(values []T,
 	return updater.PushByModifier(a, f(a.newElemField("")), values)
 }
 
+func (a *arrayBaseField[T, ElemField]) IncludeAll(values []T) filter.Filter {
+	return filter.New(a, "$all", values)
+}
+
+// AnyElemMeet Different elements can satisfy different conditions, or a single element can satisfy all conditions.
+// NOTE THAT: If using a negation operator, such as $ne, $not, or $nin, 'anyElem' is 'AllElem'.
+// In other words, none of elem meets the positive operator (the counterpart of the negation operator).
+func (a *arrayBaseField[T, ElemField]) AnyElemMeet(f func(anyElem *ElemField) filter.Filter) filter.Filter {
+	return f(a.newElemField(a.FullName()))
+}
+
+// SameElemMeet Must be the same element satisfying all conditions.
+// NOTE THAT: If using a negation operator, such as $ne, $not, or $nin, 'theOne' is 'someOne'.
+// So that means if some element of the array meets the negation operator, the document is selected.
+// In other words, not all elem meets the positive operator (the counterpart of the negation operator).
+func (a *arrayBaseField[T, ElemField]) SameElemMeet(f func(theOne *ElemField) filter.Filter) filter.Filter {
+	fil := f(a.newElemField(""))
+	return filter.SameElemMatch(a, fil)
+}
+
+// PosElemMeet Element at a fixed index must satisfy all conditions
+func (a *arrayBaseField[T, ElemField]) PosElemMeet(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter {
+	return f(a.newElemField(fmt.Sprintf("%s.%d", a.FullName(), pos)))
+}
+
 /**
 查找
 
@@ -126,6 +150,25 @@ on array elements so that at least one array element satisfies all the specified
 
 4、指定位置的特定元素满足条件
 'dim_cm.1': { $gt: 25 }
+
+5、{
+       qty: { $all: [
+					{ "$elemMatch" : { size: "M", num: { $gt: 50} } },
+           { "$elemMatch" : { num : 100, color: "green" } }
+        ] }
+   }
+
+		====>
+
+	qty: [
+      { size: "S", num: 10, color: "blue" },
+      { size: "M", num: 100, color: "blue" },
+      { size: "L", num: 100, color: "green" }
+   ]
+
+	qty: [
+      { size: "M", num: 100, color: "green" }
+   ]
 
 
 */
