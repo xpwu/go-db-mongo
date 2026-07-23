@@ -90,11 +90,24 @@ func CompareByValue(f mongodb.Field, c Comparer, value interface{}) Filter {
 	}
 }
 
+type exprFilter struct {
+	f1       mongodb.Field
+	operator string
+	f2       mongodb.Field
+}
+
+func (e *exprFilter) ToBsonD() *bson.D {
+	return &bson.D{{"$expr", bson.D{{e.operator,
+		[]string{e.f1.FullName(), e.f2.FullName()}}}}}
+}
+
+// CompareByField compare fields from the same document.
+// https://www.mongodb.com/docs/manual/reference/operator/query/expr/#compare-two-fields-from-a-single-document
 func CompareByField(f1 mongodb.Field, c Comparer, f2 mongodb.Field) Filter {
-	return &base{
-		f:        f1,
+	return &exprFilter{
+		f1:       f1,
 		operator: c.String(),
-		value:    f2.FullName(),
+		f2:       f2,
 	}
 }
 
