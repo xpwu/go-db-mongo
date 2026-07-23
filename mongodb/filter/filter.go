@@ -119,6 +119,12 @@ func SameElemMatch(f mongodb.Field, filter Filter) Filter {
 	}
 }
 
+// Not selects the documents
+//
+// 1. that do not match the <operator-expression>.
+//
+// 2.This includes documents that do not contain the field
+// https://www.mongodb.com/docs/manual/reference/operator/query/not/#mongodb-query-op.-not
 func Not(filter Filter) Filter {
 	if b, ok := filter.(*base); ok {
 		return b.not()
@@ -135,6 +141,12 @@ func Or(filter1, filter2 Filter, filters ...Filter) Filter {
 	return newLogic(or, filter1, filter2, filters...)
 }
 
+// Nor selects the documents that fail all the query predicates in the array,
+// including those documents that do not contain these field(s).
+//
+// NOTE THAT: The exception in returning documents that do not contain the field in the $nor expression
+//is when the $nor operator is used with the $exists operator.
+// https://www.mongodb.com/docs/manual/reference/operator/query/nor/#-nor-and--exists
 func Nor(filter1, filter2 Filter, filters ...Filter) Filter {
 	return newNor(filter1, filter2, filters...)
 }
