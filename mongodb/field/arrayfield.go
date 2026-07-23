@@ -324,11 +324,11 @@ func (a *arrayBaseField[T, ElemField]) SameElemMeet(f func(theOne *ElemField) fi
 //	op: { 'dim_cm.1': { $gt: 25 } }
 //
 // https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-for-an-element-by-the-array-index-position
-func (a *arrayBaseField[T, ElemField]) PosElemMeet(pos int,
-	f func(atPosElem *ElemField) filter.Filter) filter.Filter {
-
-	return f(a.newElemField(fmt.Sprintf("%s.%d", a.FullName(), pos)))
-}
+//func (a *arrayBaseField[T, ElemField]) PosElemMeet(pos int,
+//	f func(atPosElem *ElemField) filter.Filter) filter.Filter {
+//
+//	return f(a.newElemField(fmt.Sprintf("%s.%d", a.FullName(), pos)))
+//}
 
 // CoverValues The array must cover the given Values (order doesn't matter).
 //
