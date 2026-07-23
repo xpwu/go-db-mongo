@@ -43,16 +43,22 @@ func DescWith(f mongodb.Field) Option {
 	}
 }
 
+// Position A negative number corresponds to the position in the array, counting from (but not including) the last element
+//of the array. For example, -1 indicates the position just before the last element in the array.
+//
+// https://www.mongodb.com/docs/manual/reference/operator/update/position/#mongodb-update-up.-position
 func Position(pos int) Option {
 	return func(p *PushModifier) {
 		p.position = &pos
 	}
 }
 
-// Slice
-// n == 0 To update the array <field> to an empty array.
-// n < 0 To update the array <field> to contain only the last <num> elements.
-// n > 0  To update the array <field> contain only the first <num> elements.
+// Slice Limits the number of array elements during a Push operation.
+//   n == 0 To update the array <field> to an empty array.
+//   n < 0  To update the array <field> to contain only the last <num> elements.
+//   n > 0  To update the array <field> contain only the first <num> elements.
+//
+// https://www.mongodb.com/docs/manual/reference/operator/update/slice/#mongodb-update-up.-slice
 func Slice(n int) Option {
 	return func(p *PushModifier) {
 		p.slice = &n

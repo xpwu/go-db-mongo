@@ -8,6 +8,16 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+type ArrayField[T any, ElemField mongodb.Field] interface {
+	mongodb.Field
+
+	// At Element field at index pos.
+	// https://www.mongodb.com/docs/manual/core/document/#arrays
+	// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-for-an-element-by-the-array-index-position
+	// https://www.mongodb.com/docs/manual/reference/operator/update/set/#set-elements-in-arrays
+	At(pos int) *ElemField
+}
+
 // VirValue VirValue is a virtual value described by filters.
 //
 //	eg: { "$elemMatch" : { size: "M", num: { $gt: 50} }
@@ -47,7 +57,7 @@ type ArrayBaseFilter[T any, ElemField mongodb.Field] interface {
 	//	op: { 'dim_cm.1': { $gt: 25 } }
 	//
 	// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-for-an-element-by-the-array-index-position
-	PosElemMeet(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter
+	//PosElemMeet(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter
 
 	// CoverVirValues The array must cover the given VirValues — either by a single element covering all,
 	// or by multiple elements covering them collectively (order doesn't matter).
@@ -135,7 +145,35 @@ type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
 	//
 	// https://www.mongodb.com/docs/manual/reference/operator/update/pull/#examples
 	RemoveVirValue(func(elem *ElemField) VirValue) updater.Updater
-	Push(values []T, f func(elem *ElemField) updater.PushModifier) updater.Updater
+
+	// Push Appends multiple values to the array field
+	//
+	// op: { $push: { genres: { $each: [ "Modern Classic", "Award-Winning" ] } } }
+	// https://www.mongodb.com/docs/manual/reference/operator/update/push/#append-multiple-values-to-an-array
+	Push(values []T) updater.Updater
+
+	// PushWith Appends multiple values to the array field with the PushModifier
+	//
+	//   op: { $push: {
+	//         quizzes: {
+	//           $each: [ { wk: 5, score: 8 }, { wk: 6, score: 7 }, { wk: 7, score: 6 } ],
+	//           $sort: { score: -1 },
+	//           $slice: 3
+	//         }
+	//       } }
+	//
+	// Operation with modifiers occur in the following order, regardless of the order in which the modifiers appear:
+	//
+	// 1. Update array to add elements in the correct position.
+	//
+	// 2. Apply sort, if specified.
+	//
+	// 3. Slice the array, if specified.
+	//
+	// 4. Store the array.
+	//
+	// https://www.mongodb.com/docs/manual/reference/operator/update/push/#use--push-operator-with-multiple-modifiers
+	PushWith(values []T, f func(elem *ElemField) updater.PushModifier) updater.Updater
 }
 
 type ArrayComparableUpdater[T comparable, ElemField mongodb.Field] interface {
@@ -152,6 +190,10 @@ type ArrayComparableUpdater[T comparable, ElemField mongodb.Field] interface {
 type arrayBaseField[T any, ElemField mongodb.Field] struct {
 	baseField[[]T]
 	newElemField func(name string) *ElemField
+}
+
+func (a *arrayBaseField[T, ElemField]) At(pos int) *ElemField {
+	return a.newElemField(fmt.Sprintf("%s.%d", a.FullName(), pos))
 }
 
 func (a *arrayBaseField[T, ElemField]) Size(sz int) filter.Filter {
@@ -215,7 +257,36 @@ func (a *arrayBaseField[T, ElemField]) RemoveVirValue(f func(sameElem *ElemField
 	return updater.PullByFilter(a, fil)
 }
 
-func (a *arrayBaseField[T, ElemField]) Push(values []T,
+// Push Appends multiple values to the array field
+//
+// op: { $push: { genres: { $each: [ "Modern Classic", "Award-Winning" ] } } }
+// https://www.mongodb.com/docs/manual/reference/operator/update/push/#append-multiple-values-to-an-array
+func (a *arrayBaseField[T, ElemField]) Push(values []T) updater.Updater {
+	return updater.New(a, "$push", values)
+}
+
+// PushWith Appends multiple values to the array field with the PushModifier
+//
+//   op: { $push: {
+//         quizzes: {
+//           $each: [ { wk: 5, score: 8 }, { wk: 6, score: 7 }, { wk: 7, score: 6 } ],
+//           $sort: { score: -1 },
+//           $slice: 3
+//         }
+//       } }
+//
+// Operation with modifiers occur in the following order, regardless of the order in which the modifiers appear:
+//
+// 1. Update array to add elements in the correct position.
+//
+// 2. Apply sort, if specified.
+//
+// 3. Slice the array, if specified.
+//
+// 4. Store the array.
+//
+// https://www.mongodb.com/docs/manual/reference/operator/update/push/#use--push-operator-with-multiple-modifiers
+func (a *arrayBaseField[T, ElemField]) PushWith(values []T,
 	f func(elem *ElemField) updater.PushModifier) updater.Updater {
 
 	return updater.PushByModifier(a, f(a.newElemField("")), values)
