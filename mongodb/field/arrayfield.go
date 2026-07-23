@@ -8,26 +8,61 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+// VirValue VirValue is a virtual value described by filters.
+//
+//  eg: { "$elemMatch" : { size: "M", num: { $gt: 50} }
+type VirValue filter.Filter
+
 type ArrayBaseFilter[T any, ElemField mongodb.Field] interface {
 	filter.BaseFilter[[]T]
 	Size(sz int) filter.Filter
 	// AnyElemMeet Different elements can satisfy different conditions, or a single element can satisfy all conditions.
-	// NOTE THAT: If using a negation operator, such as $ne, $not, or $nin, 'anyElem' is 'AllElem'.
+	//
+	// NOTE THAT: If using a Negation operator, such as $ne, $not, or $nin, 'anyElem' is 'AllElem'.
 	// In other words, none of elem meets the positive operator (the counterpart of the negation operator).
+	//  eg: { dim_cm: { $gt: 15, $lt: 20 } }
 	AnyElemMeet(f func(anyElem *ElemField) filter.Filter) filter.Filter
-	// SameElemMeet Must be the same element satisfying all conditions.
-	// NOTE THAT: If using a negation operator, such as $ne, $not, or $nin, 'theOne' is 'someOne'.
-	// So that means if some element of the array meets the negation operator, the document is selected.
-	// In other words, not all elem meets the positive operator (the counterpart of the negation operator).
+	// SameElemMeet Must be the same element satisfying all filters.
+	//
+	// NOTE THAT: If using a Negation operator, such as $ne, $not, or $nin, 'theOne' is 'someOne'.
+	// So that means if some element of the array meets the Negation operator, the document is selected.
+	// In other words, not all elem meets the positive operator (the counterpart of the Negation operator).
+	//
+	//  eg: { dim_cm: { $elemMatch: { $gt: 22, $lt: 30 } } }
 	SameElemMeet(f func(theOne *ElemField) filter.Filter) filter.Filter
-	// PosElemMeet Element at a fixed index must satisfy all conditions
+	// PosElemMeet Element at a fixed index must satisfy all filters.
+	//
+	//  eg: { 'dim_cm.1': { $gt: 25 } }
 	PosElemMeet(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter
+	// CoverVirValues The array must cover the given VirValues — either by a single element covering all,
+	//or by multiple elements covering them collectively (order doesn't matter).
+	//
+	//	eg: { tags {
+	//          $all: [
+	//             { "$elemMatch" : { size: "M", num: { $gt: 50} } },
+	//             { "$elemMatch" : { num : 100, color: "green" } }
+	//          ]}
+	//      }
+	// Both document { tags: [
+	//      { size: "M", num: 100, color: "green" }
+	//   ] }
+	// and document
+	// { tags: [
+	//      { size: "S", num: 10, color: "blue" },
+	//      { size: "M", num: 100, color: "blue" },
+	//      { size: "L", num: 100, color: "green" }
+	//   ] }
+	// can cover these VirValues
+	CoverVirValues(f func(sameElem *ElemField) []VirValue) filter.Filter
 }
 
 type ArrayComparableFilter[T comparable, ElemField mongodb.Field] interface {
 	ArrayBaseFilter[T, ElemField]
 
-	IncludeAll(values []T) filter.Filter
+	// CoverValues The array must cover the given Values (order doesn't matter).
+	//
+	// eg: {tags: { $all: ['red', 'blank'] }}
+	CoverValues(values []T) filter.Filter
 }
 
 type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
@@ -96,29 +131,47 @@ func (a *arrayBaseField[T, ElemField]) Push(values []T,
 	return updater.PushByModifier(a, f(a.newElemField("")), values)
 }
 
-func (a *arrayBaseField[T, ElemField]) IncludeAll(values []T) filter.Filter {
+func (a *arrayBaseField[T, ElemField]) IncludeValues(values []T) filter.Filter {
 	return filter.New(a, "$all", values)
 }
 
 // AnyElemMeet Different elements can satisfy different conditions, or a single element can satisfy all conditions.
-// NOTE THAT: If using a negation operator, such as $ne, $not, or $nin, 'anyElem' is 'AllElem'.
+//
+// NOTE THAT: If using a Negation operator, such as $ne, $not, or $nin, 'anyElem' is 'AllElem'.
 // In other words, none of elem meets the positive operator (the counterpart of the negation operator).
+//  eg: { dim_cm: { $gt: 15, $lt: 20 } }
 func (a *arrayBaseField[T, ElemField]) AnyElemMeet(f func(anyElem *ElemField) filter.Filter) filter.Filter {
 	return f(a.newElemField(a.FullName()))
 }
 
-// SameElemMeet Must be the same element satisfying all conditions.
-// NOTE THAT: If using a negation operator, such as $ne, $not, or $nin, 'theOne' is 'someOne'.
-// So that means if some element of the array meets the negation operator, the document is selected.
-// In other words, not all elem meets the positive operator (the counterpart of the negation operator).
+// SameElemMeet Must be the same element satisfying all filters.
+//
+// NOTE THAT: If using a Negation operator, such as $ne, $not, or $nin, 'theOne' is 'someOne'.
+// So that means if some element of the array meets the Negation operator, the document is selected.
+// In other words, not all elem meets the positive operator (the counterpart of the Negation operator).
+//
+//  eg: { dim_cm: { $elemMatch: { $gt: 22, $lt: 30 } } }
 func (a *arrayBaseField[T, ElemField]) SameElemMeet(f func(theOne *ElemField) filter.Filter) filter.Filter {
 	fil := f(a.newElemField(""))
 	return filter.SameElemMatch(a, fil)
 }
 
-// PosElemMeet Element at a fixed index must satisfy all conditions
+// PosElemMeet Element at a fixed index must satisfy all filters.
+//
+//  eg: { 'dim_cm.1': { $gt: 25 } }
 func (a *arrayBaseField[T, ElemField]) PosElemMeet(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter {
 	return f(a.newElemField(fmt.Sprintf("%s.%d", a.FullName(), pos)))
+}
+
+// IncludeVirValues The array must include all elements of the virtual values (order doesn't matter).
+//
+//	eg: { $all: [
+//        { "$elemMatch" : { size: "M", num: { $gt: 50} } },
+//        { "$elemMatch" : { num : 100, color: "green" } }
+//      ]}
+func (a *arrayBaseField[T, ElemField]) IncludeVirValues(f func(sameElem *ElemField) []VirValue) filter.Filter {
+	virValues := f(a.newElemField(""))
+	return filter.New(a, "$all", virValues)
 }
 
 /**
