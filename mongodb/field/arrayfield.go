@@ -10,49 +10,77 @@ import (
 
 // VirValue VirValue is a virtual value described by filters.
 //
-//  eg: { "$elemMatch" : { size: "M", num: { $gt: 50} }
+//	eg: { "$elemMatch" : { size: "M", num: { $gt: 50} }
+//	    { votes: { $gte: 6 } }
+//	    { results: { score: 8 , item: "B" } }
+//	    { answers: { $elemMatch: { q: 2, a: { $gte: 8 } } } }
 type VirValue filter.Filter
 
 type ArrayBaseFilter[T any, ElemField mongodb.Field] interface {
 	filter.BaseFilter[[]T]
 	Size(sz int) filter.Filter
-	// AnyElemMeet Different elements can satisfy different conditions, or a single element can satisfy all conditions.
+
+	// AnyElemMeet Different elements can satisfy different conditions,
+	// or a single element can satisfy all conditions.
 	//
 	// NOTE THAT: If using a Negation operator, such as $ne, $not, or $nin, 'anyElem' is 'AllElem'.
 	// In other words, none of elem meets the positive operator (the counterpart of the negation operator).
-	//  eg: { dim_cm: { $gt: 15, $lt: 20 } }
+	//
+	//	op: { dim_cm: { $gt: 15, $lt: 20 } }
+	//
+	// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-an-array-with-compound-filter-conditions-on-the-array-elements
 	AnyElemMeet(f func(anyElem *ElemField) filter.Filter) filter.Filter
+
 	// SameElemMeet Must be the same element satisfying all filters.
 	//
 	// NOTE THAT: If using a Negation operator, such as $ne, $not, or $nin, 'theOne' is 'someOne'.
 	// So that means if some element of the array meets the Negation operator, the document is selected.
 	// In other words, not all elem meets the positive operator (the counterpart of the Negation operator).
 	//
-	//  eg: { dim_cm: { $elemMatch: { $gt: 22, $lt: 30 } } }
+	//	op: { dim_cm: { $elemMatch: { $gt: 22, $lt: 30 } } }
+	//
+	// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-for-an-array-element-that-meets-multiple-criteria
 	SameElemMeet(f func(theOne *ElemField) filter.Filter) filter.Filter
+
 	// PosElemMeet Element at a fixed index must satisfy all filters.
 	//
-	//  eg: { 'dim_cm.1': { $gt: 25 } }
-	PosElemMeet(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter
-	// CoverVirValues The array must cover the given VirValues — either by a single element covering all,
-	//or by multiple elements covering them collectively (order doesn't matter).
+	//	op: { 'dim_cm.1': { $gt: 25 } }
 	//
-	//	eg: { tags {
-	//          $all: [
-	//             { "$elemMatch" : { size: "M", num: { $gt: 50} } },
-	//             { "$elemMatch" : { num : 100, color: "green" } }
-	//          ]}
-	//      }
-	// Both document { tags: [
-	//      { size: "M", num: 100, color: "green" }
-	//   ] }
+	// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-for-an-element-by-the-array-index-position
+	PosElemMeet(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter
+
+	// CoverVirValues The array must cover the given VirValues — either by a single element covering all,
+	// or by multiple elements covering them collectively (order doesn't matter).
+	//
+	//		op: { tags {
+	//	         $all: [
+	//	            { "$elemMatch" : { size: "M", num: { $gt: 50} } },
+	//	            { "$elemMatch" : { num : 100, color: "green" } }
+	//	         ]}
+	//	     }
+	//
+	// Both document
+	//
+	//	{ tags: [
+	//	   { size: "M", num: 100, color: "green" }
+	//	] }
+	//
 	// and document
-	// { tags: [
-	//      { size: "S", num: 10, color: "blue" },
-	//      { size: "M", num: 100, color: "blue" },
-	//      { size: "L", num: 100, color: "green" }
-	//   ] }
+	//
+	//	{ tags: [
+	//	   { size: "S", num: 10, color: "blue" },
+	//	   { size: "M", num: 100, color: "blue" },
+	//	   { size: "L", num: 100, color: "green" }
+	//	] }
+	//
 	// can cover these VirValues
+	//
+	//	[
+	//	  { "$elemMatch" : { size: "M", num: { $gt: 50} } },
+	//	  { "$elemMatch" : { num : 100, color: "green" } }
+	//	]
+	//
+	// https://www.mongodb.com/docs/manual/reference/operator/query/all/#use--all-with--elemmatch
 	CoverVirValues(f func(sameElem *ElemField) []VirValue) filter.Filter
 }
 
@@ -61,7 +89,9 @@ type ArrayComparableFilter[T comparable, ElemField mongodb.Field] interface {
 
 	// CoverValues The array must cover the given Values (order doesn't matter).
 	//
-	// eg: {tags: { $all: ['red', 'blank'] }}
+	// op: {tags: { $all: ['red', 'blank'] }}
+	//
+	// https://www.mongodb.com/docs/manual/reference/operator/query/all/#use--all-to-match-values
 	CoverValues(values []T) filter.Filter
 }
 
@@ -70,19 +100,53 @@ type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
 
 	PopFirst() updater.Updater
 	PopLast() updater.Updater
-	// $addToSet
-	AddIfNotExist(value T) updater.Updater
-	AddEachIfNotExist(values []T) updater.Updater
-	RemoveBy(func(elem *ElemField) filter.Filter) updater.Updater
+
+	// AddEach Adds each value of values to an array unless the value is already present,
+	// in which case the value isn't added to that array.
+	//
+	// op: { $addToSet: { tags: { $each: [ "camera", "electronics", "accessories" ] } }
+	//
+	// document:
+	//
+	//	{ _id: 2, item: "cable",
+	//	  tags: [ "electronics", "supplies" ]
+	//	}
+	//
+	// only adds "camera" and "accessories" to the tags array. "electronics" was already in the array.
+	//
+	// result:
+	//
+	//	{
+	//	  _id: 2,
+	//	  item: "cable",
+	//	  tags: [ "electronics", "supplies", "camera", "accessories" ]
+	//	}
+	//
+	// https://www.mongodb.com/docs/manual/reference/operator/update/addToSet/#examples
+	AddEach(values []T) updater.Updater
+
+	// RemoveVirValue Removes all instances that match the specified VirValue from an existing array.
+	//
+	// op:
+	//
+	//		 { $pull: { votes: { $gte: 6 } } }
+	//	  { $pull: { results: { score: 8 , item: "B" } } }
+	//	  { $pull: { results: { answers: { $elemMatch: { q: 2, a: { $gte: 8 } } } } } }
+	//
+	// https://www.mongodb.com/docs/manual/reference/operator/update/pull/#examples
+	RemoveVirValue(func(elem *ElemField) VirValue) updater.Updater
 	Push(values []T, f func(elem *ElemField) updater.PushModifier) updater.Updater
 }
 
 type ArrayComparableUpdater[T comparable, ElemField mongodb.Field] interface {
 	ArrayBaseUpdater[T, ElemField]
 
-	// RemoveAll: remove all db value in the array, where the values meet the condition
-	RemoveAll(value []T) updater.Updater
-	Remove(value T) updater.Updater
+	// RemoveValues Removes all instances of the specified values from an existing array.
+	//
+	// op: { $pullAll: { scores: [ 0, 5 ] } }
+	//
+	// https://www.mongodb.com/docs/manual/reference/operator/update/pullAll/#examples
+	RemoveValues(values []T) updater.Updater
 }
 
 type arrayBaseField[T any, ElemField mongodb.Field] struct {
@@ -102,25 +166,51 @@ func (a *arrayBaseField[T, ElemField]) PopLast() updater.Updater {
 	return updater.New(a, `$pop`, 1)
 }
 
-func (a *arrayBaseField[T, ElemField]) AddIfNotExist(value T) updater.Updater {
-	return updater.New(a, "$addToSet", value)
-}
-
-func (a *arrayBaseField[T, ElemField]) AddEachIfNotExist(values []T) updater.Updater {
+// AddEach Adds each value of values to an array unless the value is already present,
+// in which case the value isn't added to that array.
+//
+// op: { $addToSet: { tags: { $each: [ "camera", "electronics", "accessories" ] } }
+//
+// document:
+//
+//	{ _id: 2, item: "cable",
+//	  tags: [ "electronics", "supplies" ]
+//	}
+//
+// only adds "camera" and "accessories" to the tags array. "electronics" was already in the array.
+//
+// result:
+//
+//	{
+//	  _id: 2,
+//	  item: "cable",
+//	  tags: [ "electronics", "supplies", "camera", "accessories" ]
+//	}
+//
+// https://www.mongodb.com/docs/manual/reference/operator/update/addToSet/#examples
+func (a *arrayBaseField[T, ElemField]) AddEach(values []T) updater.Updater {
 	return updater.New(a, "$addToSet", bson.M{"$each": values})
 }
 
-// Remove: remove all db value in the array, where the values meet the condition
-
-func (a *arrayBaseField[T, ElemField]) RemoveAll(value []T) updater.Updater {
-	return updater.New(a, "$pullAll", value)
+// RemoveValues Removes all instances of the specified values from an existing array.
+//
+// op: { $pullAll: { scores: [ 0, 5 ] } }
+//
+// https://www.mongodb.com/docs/manual/reference/operator/update/pullAll/#examples
+func (a *arrayBaseField[T, ElemField]) RemoveValues(values []T) updater.Updater {
+	return updater.New(a, "$pullAll", values)
 }
 
-func (a *arrayBaseField[T, ElemField]) Remove(value T) updater.Updater {
-	return updater.New(a, "$pull", value)
-}
-
-func (a *arrayBaseField[T, ElemField]) RemoveBy(f func(elem *ElemField) filter.Filter) updater.Updater {
+// RemoveVirValue Removes all instances that match the specified VirValue from an existing array.
+//
+// op:
+//
+//		 { $pull: { votes: { $gte: 6 } } }
+//	  { $pull: { results: { score: 8 , item: "B" } } }
+//	  { $pull: { results: { answers: { $elemMatch: { q: 2, a: { $gte: 8 } } } } } }
+//
+// https://www.mongodb.com/docs/manual/reference/operator/update/pull/#examples
+func (a *arrayBaseField[T, ElemField]) RemoveVirValue(f func(sameElem *ElemField) VirValue) updater.Updater {
 	fil := f(a.newElemField(""))
 	return updater.PullByFilter(a, fil)
 }
@@ -131,15 +221,15 @@ func (a *arrayBaseField[T, ElemField]) Push(values []T,
 	return updater.PushByModifier(a, f(a.newElemField("")), values)
 }
 
-func (a *arrayBaseField[T, ElemField]) IncludeValues(values []T) filter.Filter {
-	return filter.New(a, "$all", values)
-}
-
-// AnyElemMeet Different elements can satisfy different conditions, or a single element can satisfy all conditions.
+// AnyElemMeet Different elements can satisfy different conditions,
+// or a single element can satisfy all conditions.
 //
 // NOTE THAT: If using a Negation operator, such as $ne, $not, or $nin, 'anyElem' is 'AllElem'.
 // In other words, none of elem meets the positive operator (the counterpart of the negation operator).
-//  eg: { dim_cm: { $gt: 15, $lt: 20 } }
+//
+//	op: { dim_cm: { $gt: 15, $lt: 20 } }
+//
+// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-an-array-with-compound-filter-conditions-on-the-array-elements
 func (a *arrayBaseField[T, ElemField]) AnyElemMeet(f func(anyElem *ElemField) filter.Filter) filter.Filter {
 	return f(a.newElemField(a.FullName()))
 }
@@ -150,7 +240,9 @@ func (a *arrayBaseField[T, ElemField]) AnyElemMeet(f func(anyElem *ElemField) fi
 // So that means if some element of the array meets the Negation operator, the document is selected.
 // In other words, not all elem meets the positive operator (the counterpart of the Negation operator).
 //
-//  eg: { dim_cm: { $elemMatch: { $gt: 22, $lt: 30 } } }
+//	op: { dim_cm: { $elemMatch: { $gt: 22, $lt: 30 } } }
+//
+// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-for-an-array-element-that-meets-multiple-criteria
 func (a *arrayBaseField[T, ElemField]) SameElemMeet(f func(theOne *ElemField) filter.Filter) filter.Filter {
 	fil := f(a.newElemField(""))
 	return filter.SameElemMatch(a, fil)
@@ -158,73 +250,60 @@ func (a *arrayBaseField[T, ElemField]) SameElemMeet(f func(theOne *ElemField) fi
 
 // PosElemMeet Element at a fixed index must satisfy all filters.
 //
-//  eg: { 'dim_cm.1': { $gt: 25 } }
-func (a *arrayBaseField[T, ElemField]) PosElemMeet(pos int, f func(atPosElem *ElemField) filter.Filter) filter.Filter {
+//	op: { 'dim_cm.1': { $gt: 25 } }
+//
+// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-for-an-element-by-the-array-index-position
+func (a *arrayBaseField[T, ElemField]) PosElemMeet(pos int,
+	f func(atPosElem *ElemField) filter.Filter) filter.Filter {
+
 	return f(a.newElemField(fmt.Sprintf("%s.%d", a.FullName(), pos)))
 }
 
-// IncludeVirValues The array must include all elements of the virtual values (order doesn't matter).
+// CoverValues The array must cover the given Values (order doesn't matter).
 //
-//	eg: { $all: [
-//        { "$elemMatch" : { size: "M", num: { $gt: 50} } },
-//        { "$elemMatch" : { num : 100, color: "green" } }
-//      ]}
-func (a *arrayBaseField[T, ElemField]) IncludeVirValues(f func(sameElem *ElemField) []VirValue) filter.Filter {
+// op: {tags: { $all: ['red', 'blank'] }}
+//
+// https://www.mongodb.com/docs/manual/reference/operator/query/all/#use--all-to-match-values
+func (a *arrayBaseField[T, ElemField]) CoverValues(values []T) filter.Filter {
+	return filter.New(a, "$all", values)
+}
+
+// CoverVirValues The array must cover the given VirValues — either by a single element covering all,
+// or by multiple elements covering them collectively (order doesn't matter).
+//
+//		op: { tags {
+//	         $all: [
+//	            { "$elemMatch" : { size: "M", num: { $gt: 50} } },
+//	            { "$elemMatch" : { num : 100, color: "green" } }
+//	         ]}
+//	     }
+//
+// Both document
+//
+//	{ tags: [
+//	   { size: "M", num: 100, color: "green" }
+//	] }
+//
+// and document
+//
+//	{ tags: [
+//	   { size: "S", num: 10, color: "blue" },
+//	   { size: "M", num: 100, color: "blue" },
+//	   { size: "L", num: 100, color: "green" }
+//	] }
+//
+// can cover these VirValues
+//
+//	[
+//	  { "$elemMatch" : { size: "M", num: { $gt: 50} } },
+//	  { "$elemMatch" : { num : 100, color: "green" } }
+//	]
+//
+// https://www.mongodb.com/docs/manual/reference/operator/query/all/#use--all-with--elemmatch
+func (a *arrayBaseField[T, ElemField]) CoverVirValues(f func(sameElem *ElemField) []VirValue) filter.Filter {
 	virValues := f(a.newElemField(""))
 	return filter.New(a, "$all", virValues)
 }
-
-/**
-查找
-
-一、作为普通域
-1、 整个数组严格相等或者某种大小关系   -----  这是 BaseFilter 或者  ComparableFilter 的能力
-
-二、元素级别
-1、元素包括这些值 [a, b]  ---- $all  where  element==
-{tags: { $all: ['red', 'blank'] }}
-contains both "red" and "blank" regardless of order or other elements in the array, use the $all operator
-
-2、任意多个元素满足一个或多个条件
-dim_cm: { $gt: 15, $lt: 20 }
-tags: 'red'
-dim_cm: { $gt: 25 }
-任意一个元素 == value 或者其他田间。  如果是多个条件，数组中不同的元素满足不同的条件，但是合起来整个数组满足所有条件就行，不要求是
-同一个元素满足所有条件
-One element can satisfy the greater than 15 condition
-	and another element can satisfy the less than 20 condition,
-or a single element can satisfy both:
-
-3、任意同一个元素满足所有条件  $elemMatch
-{
-  dim_cm: { $elemMatch: { $gt: 22, $lt: 30 } }
-}
-on array elements so that at least one array element satisfies all the specified criteria
-
-4、指定位置的特定元素满足条件
-'dim_cm.1': { $gt: 25 }
-
-5、{
-       qty: { $all: [
-					{ "$elemMatch" : { size: "M", num: { $gt: 50} } },
-           { "$elemMatch" : { num : 100, color: "green" } }
-        ] }
-   }
-
-		====>
-
-	qty: [
-      { size: "S", num: 10, color: "blue" },
-      { size: "M", num: 100, color: "blue" },
-      { size: "L", num: 100, color: "green" }
-   ]
-
-	qty: [
-      { size: "M", num: 100, color: "green" }
-   ]
-
-
-*/
 
 /**
 更新：
@@ -238,5 +317,3 @@ $[]  所有的值  update every element of an array
 
 $[<identifier>]
 */
-
-// extract
