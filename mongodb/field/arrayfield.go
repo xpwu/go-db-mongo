@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/xpwu/go-db-mongo/mongodb"
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
+	"github.com/xpwu/go-db-mongo/mongodb/index"
 	"github.com/xpwu/go-db-mongo/mongodb/updater"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"sync/atomic"
@@ -280,12 +281,14 @@ type ArrayField[T any, ElemField mongodb.Field] interface {
 	ArrayBaseField[T, ElemField]
 	ArrayBaseFilter[T, ElemField]
 	ArrayBaseUpdater[T, ElemField]
+	index.BaseKey
 }
 
 type ArrayComparableField[T any, ElemField mongodb.Field] interface {
 	ArrayBaseField[T, ElemField]
 	ArrayComparableFilter[T, ElemField]
 	ArrayComparableUpdater[T, ElemField]
+	index.BaseKey
 }
 
 type arrayBaseField[T any, ElemField mongodb.Field] struct {

@@ -2,6 +2,7 @@ package field
 
 import (
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
+	"github.com/xpwu/go-db-mongo/mongodb/index"
 	"github.com/xpwu/go-db-mongo/mongodb/updater"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -95,4 +96,12 @@ func (b *baseField[T]) Inc(num T) updater.Updater {
 // Mul finalValue = nowValue * num or finalValue = 0 (if nowValue is Not exist)
 func (b *baseField[T]) Mul(num T) updater.Updater {
 	return updater.New(b, "$mul", num)
+}
+
+func (b *baseField[T]) AscIndex() index.Key {
+	return index.NewKey(b, 1)
+}
+
+func (b *baseField[T]) DescIndex() index.Key {
+	return index.NewKey(b, -1)
 }

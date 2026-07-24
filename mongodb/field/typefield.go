@@ -3,6 +3,7 @@ package field
 import (
 	"github.com/xpwu/go-db-mongo/mongodb"
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
+	"github.com/xpwu/go-db-mongo/mongodb/index"
 	"github.com/xpwu/go-db-mongo/mongodb/updater"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -17,11 +18,11 @@ type IntegerFilter[T Integer] interface {
 	Mod(divisor, remainder T) filter.Filter
 }
 
-// IntegerField todo *index.BaseKey
 type IntegerField[T Integer] interface {
 	mongodb.Field
 	IntegerFilter[T]
 	updater.ComputableUpdater[T, T]
+	index.BaseKey
 }
 
 func (b *baseField[T]) Mod(divisor, remainder T) filter.Filter {
@@ -50,11 +51,11 @@ type UnInteger interface {
 	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
 }
 
-// UnIntegerField todo *index.BaseKey
 type UnIntegerField[T UnInteger, VT Integer] interface {
 	mongodb.Field
 	IntegerFilter[T]
 	updater.ComputableUpdater[T, VT]
+	index.BaseKey
 }
 
 type unIntegerField[T UnInteger, VT Integer] struct {
@@ -90,11 +91,11 @@ type StringFilter interface {
 	filter.ComparableFilter[string]
 }
 
-// StringField todo *index.BaseKey
 type StringField interface {
 	mongodb.Field
 	StringFilter
 	updater.BaseUpdater[string]
+	index.BaseKey
 }
 
 type stringField struct {
@@ -109,11 +110,11 @@ func NewStringField(name string) StringField {
 	return &stringField{baseField[string]{name}}
 }
 
-// ComparableField todo *index.BaseKey
 type ComparableField[T ~bool | bson.ObjectID] interface {
 	mongodb.Field
 	filter.ComparableFilter[T]
 	updater.BaseUpdater[T]
+	index.BaseKey
 }
 
 func NewComparableField[T ~bool | bson.ObjectID](name string) ComparableField[T] {
@@ -128,11 +129,11 @@ var (
 	NewObjectIDField = NewComparableField[bson.ObjectID]
 )
 
-// ComputableField todo *index.BaseKey
 type ComputableField[T ~float32 | ~float64] interface {
 	mongodb.Field
 	filter.BaseFilter[T]
 	updater.ComputableUpdater[T, T]
+	index.BaseKey
 }
 
 func NewComputableField[T ~float32 | ~float64](name string) ComputableField[T] {
@@ -147,22 +148,22 @@ var (
 	NewFloat64Field = NewComputableField[float64]
 )
 
-// Decimal128Field todo *index.BaseKey
 type Decimal128Field interface {
 	mongodb.Field
 	filter.ComparableFilter[bson.Decimal128]
 	updater.ComputableUpdater[bson.Decimal128, bson.Decimal128]
+	index.BaseKey
 }
 
 func NewDecimal128Field(name string) Decimal128Field {
 	return &baseField[bson.Decimal128]{name}
 }
 
-// BinaryField todo *index.BaseKey
 type BinaryField interface {
 	mongodb.Field
 	filter.ComparableFilter[bson.Binary]
 	updater.BaseUpdater[bson.Binary]
+	index.BaseKey
 }
 
 func NewBinaryField(name string) BinaryField {
