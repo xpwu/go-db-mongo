@@ -2,15 +2,60 @@ package field
 
 import (
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
+	"github.com/xpwu/go-db-mongo/mongodb/index"
 	"github.com/xpwu/go-db-mongo/mongodb/updater"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+type deprecatedBase interface {
+	FullName() string
+}
+
+type deprecatedBaseKey interface {
+	deprecatedBase
+	AscIndex() index.Key
+	DescIndex() index.Key
+}
+
+type deprecatedBaseUpdater interface {
+	deprecatedBase
+	Unset() updater.Updater
+	// 已经由 Set(value T) Updater 与 SetOnInsert(value T) Updater 代替
+	// 暂时不考虑 interface{} 与 T 的兼容性，上层在调用旧版本时，正常使用都应该是传的 T
+	//Set(value interface{}) updater.Updater
+	//SetOnInsert(value interface{}) updater.Updater
+}
+
+type deprecatedBaseFilter interface {
+	deprecatedBase
+	Exist() filter.Filter
+	NotExist() filter.Filter
+	Type(t bson.Type) filter.Filter
+}
+
+type binary0FUpdaterF interface {
+	deprecatedBaseUpdater
+	Set(value bson.Binary) updater.Updater
+	SetOnIns(value bson.Binary) updater.Updater
+}
+
+type binary0FFilterF interface {
+	deprecatedBaseFilter
+	In(values []bson.Binary) filter.Filter
+	Nin(values []bson.Binary) filter.Filter
+}
+
+type binary0F interface {
+	binary0FUpdaterF
+	binary0FFilterF
+	deprecatedBaseKey
+}
+
 // Deprecated:
 type (
 	Binary0F         = BinaryField
-	Binary0FUpdaterF = updater.BaseUpdater[bson.Binary]
-	Binary0FFilterF  = filter.ComparableFilter[bson.Binary]
+	Binary0FUpdaterF = updater.BaseUpdaterField[bson.Binary]
+	Binary0FFilterF  = filter.ComparableFilterField[bson.Binary]
 )
 
 // Deprecated:
@@ -21,21 +66,4 @@ var (
 	NewBinary0F func(string) Binary0F = NewBinaryField
 )
 
-// Binary0F
-type (
-	binary0FUpdaterF interface {
-		Set(value bson.Binary) updater.Updater
-		SetOnIns(value bson.Binary) updater.Updater
-	}
-
-	binary0FFilterF interface {
-		In(values []bson.Binary) filter.Filter
-		Nin(values []bson.Binary) filter.Filter
-	}
-
-	binary0F interface {
-		binary0FUpdaterF
-		binary0FFilterF
-		FullName() string
-	}
-)
+// Deprecated:
