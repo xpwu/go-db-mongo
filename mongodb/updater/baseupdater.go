@@ -1,5 +1,12 @@
 package updater
 
+import "github.com/xpwu/go-db-mongo/mongodb"
+
+type BaseUpdaterField[T any] interface {
+	mongodb.Field
+	BaseUpdater[T]
+}
+
 type BaseUpdater[T any] interface {
 	// Unset deletes a particular field
 	//
