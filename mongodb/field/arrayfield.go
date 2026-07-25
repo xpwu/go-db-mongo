@@ -184,8 +184,10 @@ type ArrayBaseFilter[T any, ElemField mongodb.Field] interface {
 	CoverVirValues(f func(sameElem ElemField) []VirValue) filter.Filter
 }
 
-type ArrayComparableFilter[T comparable, ElemField mongodb.Field] interface {
+// ArrayComparableFilter T ~ comparable | EqualAble
+type ArrayComparableFilter[T any, ElemField mongodb.Field] interface {
 	ArrayBaseFilter[T, ElemField]
+	filter.ComparableFilter[[]T]
 
 	// CoverValues checks whether the array covers the given values.
 	//
@@ -266,7 +268,8 @@ type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
 	PushWith(values []T, f func(elem ElemField) updater.PushModifier) updater.Updater
 }
 
-type ArrayComparableUpdater[T comparable, ElemField mongodb.Field] interface {
+// ArrayComparableUpdater T ~ comparable | EqualAble
+type ArrayComparableUpdater[T any, ElemField mongodb.Field] interface {
 	ArrayBaseUpdater[T, ElemField]
 
 	// RemoveValues removes all instances of the specified values from an existing array.
@@ -284,6 +287,7 @@ type ArrayField[T any, ElemField mongodb.Field] interface {
 	index.BaseKey
 }
 
+// ArrayComparableField T ~ comparable | EqualAble
 type ArrayComparableField[T any, ElemField mongodb.Field] interface {
 	ArrayBaseField[T, ElemField]
 	ArrayComparableFilter[T, ElemField]
@@ -299,10 +303,16 @@ type arrayBaseField[T any, ElemField mongodb.Field] struct {
 func NewArrayField[T any, ElemField mongodb.Field](name string,
 	newElem func(name string) ElemField) ArrayField[T, ElemField] {
 
-	return NewArrayComparableField[T](name, newElem)
+	return &arrayBaseField[T, ElemField]{baseField[[]T]{name: name}, newElem}
 }
 
-func NewArrayComparableField[T any, ElemField mongodb.Field](name string,
+func NewArrayComparableField[T comparable, ElemField mongodb.Field](name string,
+	newElem func(name string) ElemField) ArrayComparableField[T, ElemField] {
+
+	return &arrayBaseField[T, ElemField]{baseField[[]T]{name: name}, newElem}
+}
+
+func NewArrayEqualAbleField[T filter.EqualAble[T], ElemField mongodb.Field](name string,
 	newElem func(name string) ElemField) ArrayComparableField[T, ElemField] {
 
 	return &arrayBaseField[T, ElemField]{baseField[[]T]{name: name}, newElem}
