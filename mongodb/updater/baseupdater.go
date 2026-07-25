@@ -41,11 +41,4 @@ type BaseUpdater[T any] interface {
 	//
 	// https://www.mongodb.com/docs/manual/reference/operator/update/max/
 	SetMax(value T) Updater
-
-	// Deprecated: Min using: SetMin
-	Min(value T) Updater
-	// Deprecated: Max using: SetMax
-	Max(value T) Updater
-	// Deprecated: SetOnIns using: SetOnInsert
-	SetOnIns(value T) Updater
 }
