@@ -1,6 +1,7 @@
 package field
 
 import (
+	"github.com/xpwu/go-db-mongo/mongodb"
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
 	"github.com/xpwu/go-db-mongo/mongodb/index"
 	"github.com/xpwu/go-db-mongo/mongodb/updater"
@@ -54,8 +55,8 @@ type binary0F interface {
 // Deprecated:
 type (
 	Binary0F         = BinaryField
-	Binary0FUpdaterF = updater.BaseUpdaterField[bson.Binary]
-	Binary0FFilterF  = filter.ComparableFilterField[bson.Binary]
+	Binary0FUpdaterF = BinaryField
+	Binary0FFilterF  = BinaryField
 )
 
 // Deprecated:
@@ -66,4 +67,37 @@ var (
 	NewBinary0F func(string) Binary0F = NewBinaryField
 )
 
+type array interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	PopFirst() updater.Updater
+	PopLast() updater.Updater
+	PullByF(f filter.Filter) updater.Updater
+	SameEleMatch(f filter.Filter) filter.Filter
+	Size(sz int) filter.Filter
+}
+
 // Deprecated:
+type Array struct {
+	ArrayField[any, mongodb.Field]
+}
+
+func (a *Array) PullByF(f filter.Filter) updater.Updater {
+	return updater.PullByFilter(a, f)
+}
+
+func (a *Array) SameEleMatch(f filter.Filter) filter.Filter {
+	return filter.SameElemMatch(a, f)
+}
+
+// Deprecated:
+var (
+	NewArray func(fName string) *Array = func(fName string) *Array {
+		return &Array{NewArrayField[any, mongodb.Field](fName, func(name string) mongodb.Field {
+			return &baseField[any]{name: name}
+		})}
+	}
+
+	_ array = NewArray("")
+)
