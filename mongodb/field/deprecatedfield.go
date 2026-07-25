@@ -22,9 +22,8 @@ type deprecatedBaseKey interface {
 type deprecatedBaseUpdater interface {
 	deprecatedBase
 	Unset() updater.Updater
-	// 已经由 Set(value T) Updater 与 SetOnInsert(value T) Updater 代替
+	// 已经由 SetOnInsert(value T) Updater 代替
 	// 暂时不考虑 interface{} 与 T 的兼容性，上层在调用旧版本时，正常使用都应该是传的 T
-	//Set(value interface{}) updater.Updater
 	//SetOnInsert(value interface{}) updater.Updater
 }
 
@@ -54,18 +53,41 @@ type binary0F interface {
 }
 
 // Deprecated: Binary0F using BinaryField
-type (
-	Binary0F         = BinaryField
-	Binary0FUpdaterF = BinaryField
-	Binary0FFilterF  = BinaryField
-)
+type Binary0F struct {
+	BinaryField
+}
+
+// Deprecated: Min using: updater.BaseUpdater[].SetMin
+func (f *Binary0F) Min(value bson.Binary) updater.Updater {
+	return f.SetMin(value)
+}
+
+// Deprecated: Max using: updater.BaseUpdater[].SetMax
+func (f *Binary0F) Max(value bson.Binary) updater.Updater {
+	return f.SetMax(value)
+}
+
+// Deprecated: SetOnIns using: updater.BaseUpdater[].SetOnInsert
+func (f *Binary0F) SetOnIns(value bson.Binary) updater.Updater {
+	return f.SetOnInsert(value)
+}
 
 // Deprecated: NewBinary0F using NewBinaryField
+func NewBinary0F(fName string) *Binary0F {
+	return &Binary0F{NewBinaryField(fName)}
+}
+
+// Deprecated
+type (
+	Binary0FUpdaterF = Binary0F
+	Binary0FFilterF  = Binary0F
+)
+
+// Deprecated
 var (
-	_           binary0F              = Binary0F(nil)
-	_           binary0FUpdaterF      = Binary0FUpdaterF(nil)
-	_           binary0FFilterF       = Binary0FFilterF(nil)
-	NewBinary0F func(string) Binary0F = NewBinaryField
+	_ binary0F         = &Binary0F{}
+	_ binary0FUpdaterF = &Binary0FUpdaterF{}
+	_ binary0FFilterF  = &Binary0FFilterF{}
 )
 
 type arrayField interface {
@@ -233,4 +255,208 @@ type Binary1Field interface {
 // Deprecated: NewBinary1Field using NewArrayEqualAbleField[bson.Binary, BinaryField]
 func NewBinary1Field(fName string) Binary1Field {
 	return &binary1Field{newDepEqualAbleArrF[bson.Binary, BinaryField](fName, NewBinaryField)}
+}
+
+type bool0FUpdaterF interface {
+	deprecatedBaseUpdater
+	Min(value bool) updater.Updater
+	Max(value bool) updater.Updater
+	Set(value bool) updater.Updater
+	SetOnIns(value bool) updater.Updater
+}
+
+type bool0FFilterF interface {
+	deprecatedBaseFilter
+	Eq(value bool) filter.Filter
+	Ne(value bool) filter.Filter
+	NeField(f filter.ComparableFilterField[bool]) filter.Filter
+	EqField(f filter.ComparableFilterField[bool]) filter.Filter
+	Gte(value bool) filter.Filter
+	Lte(value bool) filter.Filter
+	GteField(f filter.ComparableFilterField[bool]) filter.Filter
+	LteField(f filter.ComparableFilterField[bool]) filter.Filter
+	Gt(value bool) filter.Filter
+	Lt(value bool) filter.Filter
+	GtField(f filter.BaseFilterField[bool]) filter.Filter
+	LtField(f filter.BaseFilterField[bool]) filter.Filter
+	In(values []bool) filter.Filter
+	Nin(values []bool) filter.Filter
+}
+
+type bool0F interface {
+	bool0FUpdaterF
+	bool0FFilterF
+	deprecatedBaseKey
+}
+
+// Deprecated: Bool0F using BoolField
+type Bool0F struct {
+	ComparableField[bool]
+}
+
+// Deprecated: Min using: updater.BaseUpdater[].SetMin
+func (f *Bool0F) Min(value bool) updater.Updater {
+	return f.SetMin(value)
+}
+
+// Deprecated: Max using: updater.BaseUpdater[].SetMax
+func (f *Bool0F) Max(value bool) updater.Updater {
+	return f.SetMax(value)
+}
+
+// Deprecated: SetOnIns using: updater.BaseUpdater[].SetOnInsert
+func (f *Bool0F) SetOnIns(value bool) updater.Updater {
+	return f.SetOnInsert(value)
+}
+
+// Deprecated: NewBool0F using NewBoolField
+func NewBool0F(fName string) *Bool0F {
+	return &Bool0F{NewBoolField(fName)}
+}
+
+// Deprecated:
+type (
+	Bool0FUpdaterF = Bool0F
+	Bool0FFilterF  = Bool0F
+)
+
+var (
+	_ bool0F         = &Bool0F{}
+	_ bool0FUpdaterF = &Bool0FUpdaterF{}
+	_ bool0FFilterF  = &Bool0FFilterF{}
+)
+
+type bool1Field struct {
+	*depTypeArrayField[bool, BoolField]
+}
+
+// Deprecated: Push using ArrayField[].Push
+func (da *bool1Field) Push(value bool) updater.Updater {
+	return da.ArrayComparableField.Push([]bool{value})
+}
+
+// Deprecated: Bool1Field using ArrayComparableField[bool, BoolField]
+type Bool1Field interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	EleAt(index int) Bool0F
+	EleOne() Bool0F
+	EleThat() Bool0FUpdaterF
+	EleAll() Bool0FUpdaterF
+	EleByFid(identifier string) Bool0FUpdaterF
+	DeclFid(identifier string) Bool0FFilterF
+	Include(a []bool) filter.Filter
+	Eq(a []bool) filter.Filter
+	Set(a []bool) updater.Updater
+	AddToSet(value bool) updater.Updater
+	AddToSetValues(a []bool) updater.Updater
+	Pull(value bool) updater.Updater
+	PullAll(a []bool) updater.Updater
+	Push(value bool) updater.Updater
+	PushByModifier(m updater.PushModifier, each []bool) updater.Updater
+}
+
+// Deprecated: NewBool1Field using NewArrayEqualAbleField[bool, BoolField]
+func NewBool1Field(fName string) Bool1Field {
+	return &bool1Field{newDepCompAbleArrF[bool, BoolField](fName, NewBoolField)}
+}
+
+type decimal1280FUpdaterF interface {
+	deprecatedBaseUpdater
+	Inc(num bson.Decimal128) updater.Updater
+	Mul(num bson.Decimal128) updater.Updater
+	Min(value bson.Decimal128) updater.Updater
+	Max(value bson.Decimal128) updater.Updater
+	Set(value bson.Decimal128) updater.Updater
+	SetOnIns(value bson.Decimal128) updater.Updater
+}
+
+type decimal1280FFilterF interface {
+	deprecatedBaseFilter
+	Gt(value bson.Decimal128) filter.Filter
+	Lt(value bson.Decimal128) filter.Filter
+	GtField(f filter.BaseFilterField[bson.Decimal128]) filter.Filter
+	LtField(f filter.BaseFilterField[bson.Decimal128]) filter.Filter
+	In(values []bson.Decimal128) filter.Filter
+	Nin(values []bson.Decimal128) filter.Filter
+}
+
+type decimal1280F interface {
+	decimal1280FUpdaterF
+	decimal1280FFilterF
+	deprecatedBaseKey
+}
+
+// Deprecated: Decimal1280F using Decimal128Field
+type Decimal1280F struct {
+	Decimal128Field
+}
+
+// Deprecated: Min using: updater.BaseUpdater[].SetMin
+func (f *Decimal1280F) Min(value bson.Decimal128) updater.Updater {
+	return f.SetMin(value)
+}
+
+// Deprecated: Max using: updater.BaseUpdater[].SetMax
+func (f *Decimal1280F) Max(value bson.Decimal128) updater.Updater {
+	return f.SetMax(value)
+}
+
+// Deprecated: SetOnIns using: updater.BaseUpdater[].SetOnInsert
+func (f *Decimal1280F) SetOnIns(value bson.Decimal128) updater.Updater {
+	return f.SetOnInsert(value)
+}
+
+// Deprecated: NewDecimal1280F using NewDecimal128Field
+func NewDecimal1280F(fName string) *Decimal1280F {
+	return &Decimal1280F{NewDecimal128Field(fName)}
+}
+
+// Deprecated:
+type (
+	Decimal1280FUpdaterF = Decimal1280F
+	Decimal1280FFilterF  = Decimal1280F
+)
+
+var (
+	_ decimal1280F         = &Decimal1280F{}
+	_ decimal1280FUpdaterF = &Decimal1280FUpdaterF{}
+	_ decimal1280FFilterF  = &Decimal1280FFilterF{}
+)
+
+type decimal1281Field struct {
+	*depTypeArrayField[bson.Decimal128, Decimal128Field]
+}
+
+// Deprecated: Push using ArrayField[].Push
+func (da *decimal1281Field) Push(value bson.Decimal128) updater.Updater {
+	return da.ArrayComparableField.Push([]bson.Decimal128{value})
+}
+
+// Deprecated: Decimal1281Field using ArrayComparableField[bson.Decimal128, Decimal128Field]
+type Decimal1281Field interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	EleAt(index int) Decimal1280F
+	EleOne() Decimal1280F
+	EleThat() Decimal1280FUpdaterF
+	EleAll() Decimal1280FUpdaterF
+	EleByFid(identifier string) Decimal1280FUpdaterF
+	DeclFid(identifier string) Decimal1280FFilterF
+	Include(a []bson.Decimal128) filter.Filter
+	Eq(a []bson.Decimal128) filter.Filter
+	Set(a []bson.Decimal128) updater.Updater
+	AddToSet(value bson.Decimal128) updater.Updater
+	AddToSetValues(a []bson.Decimal128) updater.Updater
+	Pull(value bson.Decimal128) updater.Updater
+	PullAll(a []bson.Decimal128) updater.Updater
+	Push(value bson.Decimal128) updater.Updater
+	PushByModifier(m updater.PushModifier, each []bson.Decimal128) updater.Updater
+}
+
+// Deprecated: NewDecimal1281Field using NewArrayEqualAbleField[bson.Decimal128, Decimal128Field]
+func NewDecimal1281Field(fName string) Decimal1281Field {
+	return &decimal1281Field{newDepCompAbleArrF[bson.Decimal128, Decimal128Field](fName, NewDecimal128Field)}
 }
