@@ -460,3 +460,751 @@ type Decimal1281Field interface {
 func NewDecimal1281Field(fName string) Decimal1281Field {
 	return &decimal1281Field{newDepCompAbleArrF[bson.Decimal128, Decimal128Field](fName, NewDecimal128Field)}
 }
+
+type float320FUpdaterF interface {
+	deprecatedBaseUpdater
+	Min(value float32) updater.Updater
+	Max(value float32) updater.Updater
+	Set(value float32) updater.Updater
+	SetOnIns(value float32) updater.Updater
+}
+
+type float320FFilterF interface {
+	deprecatedBaseFilter
+	Gt(value float32) filter.Filter
+	Lt(value float32) filter.Filter
+	GtField(f filter.BaseFilterField[float32]) filter.Filter
+	LtField(f filter.BaseFilterField[float32]) filter.Filter
+	In(values []float32) filter.Filter
+	Nin(values []float32) filter.Filter
+}
+
+type float320F interface {
+	float320FUpdaterF
+	float320FFilterF
+	deprecatedBaseKey
+}
+
+// Deprecated: Float320F using Float32Field
+type Float320F struct {
+	ComputableField[float32]
+}
+
+// Deprecated: Min using: updater.BaseUpdater[].SetMin
+func (f *Float320F) Min(value float32) updater.Updater {
+	return f.SetMin(value)
+}
+
+// Deprecated: Max using: updater.BaseUpdater[].SetMax
+func (f *Float320F) Max(value float32) updater.Updater {
+	return f.SetMax(value)
+}
+
+// Deprecated: SetOnIns using: updater.BaseUpdater[].SetOnInsert
+func (f *Float320F) SetOnIns(value float32) updater.Updater {
+	return f.SetOnInsert(value)
+}
+
+// Deprecated: this is a bug
+func (f *Float320F) In(values []float32) filter.Filter {
+	return filter.New(f, "$in", values)
+}
+
+// Deprecated: this is a bug
+func (f *Float320F) Nin(values []float32) filter.Filter {
+	return filter.New(f, "$nin", values)
+}
+
+// Deprecated: NewFloat320F using NewFloat32Field
+func NewFloat320F(fName string) *Float320F {
+	return &Float320F{NewFloat32Field(fName)}
+}
+
+// Deprecated:
+type (
+	Float320FUpdaterF = Float320F
+	Float320FFilterF  = Float320F
+)
+
+var (
+	_ float320F         = &Float320F{}
+	_ float320FUpdaterF = &Float320F{}
+	_ float320FFilterF  = &Float320F{}
+)
+
+type float321Field struct {
+	*depTypeArrayField[float32, Float32Field]
+}
+
+// Deprecated: Push using ArrayField[].Push
+func (da *float321Field) Push(value float32) updater.Updater {
+	return da.ArrayComparableField.Push([]float32{value})
+}
+
+// Deprecated: Float321Field using ArrayComparableField[float32, Float32Field]
+type Float321Field interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	EleAt(index int) Float320F
+	EleOne() Float320F
+	EleThat() Float320FUpdaterF
+	EleAll() Float320FUpdaterF
+	EleByFid(identifier string) Float320FUpdaterF
+	DeclFid(identifier string) Float320FFilterF
+	Include(a []float32) filter.Filter
+	Eq(a []float32) filter.Filter
+	Set(a []float32) updater.Updater
+	AddToSet(value float32) updater.Updater
+	AddToSetValues(a []float32) updater.Updater
+	Pull(value float32) updater.Updater
+	PullAll(a []float32) updater.Updater
+	Push(value float32) updater.Updater
+	PushByModifier(m updater.PushModifier, each []float32) updater.Updater
+}
+
+// Deprecated: NewFloat321Field using ArrayComparableField[float32, Float32Field]
+func NewFloat321Field(fName string) Float321Field {
+	return &float321Field{newDepCompAbleArrF[float32, Float32Field](fName, NewFloat32Field)}
+}
+
+type int0FUpdaterF interface {
+	deprecatedBaseUpdater
+	Inc(num int) updater.Updater
+	Mul(num int) updater.Updater
+	Min(value int) updater.Updater
+	Max(value int) updater.Updater
+	Set(value int) updater.Updater
+	SetOnIns(value int) updater.Updater
+}
+
+type int0FFilterF interface {
+	deprecatedBaseFilter
+	Mod(divisor, remainder int) filter.Filter
+	Eq(value int) filter.Filter
+	Ne(value int) filter.Filter
+	NeField(f filter.ComparableFilterField[int]) filter.Filter
+	EqField(f filter.ComparableFilterField[int]) filter.Filter
+	Gte(value int) filter.Filter
+	Lte(value int) filter.Filter
+	GteField(f filter.ComparableFilterField[int]) filter.Filter
+	LteField(f filter.ComparableFilterField[int]) filter.Filter
+	Gt(value int) filter.Filter
+	Lt(value int) filter.Filter
+	GtField(f filter.BaseFilterField[int]) filter.Filter
+	LtField(f filter.BaseFilterField[int]) filter.Filter
+	In(values []int) filter.Filter
+	Nin(values []int) filter.Filter
+}
+
+type int0F interface {
+	int0FUpdaterF
+	int0FFilterF
+	deprecatedBaseKey
+}
+
+// Deprecated: Int0F using IntField
+type Int0F struct {
+	IntegerField[int]
+}
+
+// Deprecated: Min using: updater.BaseUpdater[].SetMin
+func (f *Int0F) Min(value int) updater.Updater {
+	return f.SetMin(value)
+}
+
+// Deprecated: Max using: updater.BaseUpdater[].SetMax
+func (f *Int0F) Max(value int) updater.Updater {
+	return f.SetMax(value)
+}
+
+// Deprecated: SetOnIns using: updater.BaseUpdater[].SetOnInsert
+func (f *Int0F) SetOnIns(value int) updater.Updater {
+	return f.SetOnInsert(value)
+}
+
+// Deprecated: NewInt0F using NewIntField
+func NewInt0F(fName string) *Int0F {
+	return &Int0F{NewIntField(fName)}
+}
+
+// Deprecated:
+type (
+	Int0FUpdaterF = Int0F
+	Int0FFilterF  = Int0F
+)
+
+var (
+	_ int0F         = &Int0F{}
+	_ int0FUpdaterF = &Int0F{}
+	_ int0FFilterF  = &Int0F{}
+)
+
+type int1Field struct {
+	*depTypeArrayField[int, IntField]
+}
+
+// Deprecated: Push using ArrayField[].Push
+func (da *int1Field) Push(value int) updater.Updater {
+	return da.ArrayComparableField.Push([]int{value})
+}
+
+// Deprecated: Int1Field using ArrayComparableField[int, IntField]
+type Int1Field interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	EleAt(index int) Int0F
+	EleOne() Int0F
+	EleThat() Int0FUpdaterF
+	EleAll() Int0FUpdaterF
+	EleByFid(identifier string) Int0FUpdaterF
+	DeclFid(identifier string) Int0FFilterF
+	Include(a []int) filter.Filter
+	Eq(a []int) filter.Filter
+	Set(a []int) updater.Updater
+	AddToSet(value int) updater.Updater
+	AddToSetValues(a []int) updater.Updater
+	Pull(value int) updater.Updater
+	PullAll(a []int) updater.Updater
+	Push(value int) updater.Updater
+	PushByModifier(m updater.PushModifier, each []int) updater.Updater
+}
+
+// Deprecated: NewInt1Field using ArrayComparableField[int, IntField]
+func NewInt1Field(fName string) Int1Field {
+	return &int1Field{newDepCompAbleArrF[int, IntField](fName, NewIntField)}
+}
+
+type uint0FUpdaterF interface {
+	deprecatedBaseUpdater
+	// Inc(num uint) is a bug.
+	Inc(num int) updater.Updater
+	Mul(num uint) updater.Updater
+	Min(value uint) updater.Updater
+	Max(value uint) updater.Updater
+	Set(value uint) updater.Updater
+	SetOnIns(value uint) updater.Updater
+}
+
+type uint0FFilterF interface {
+	deprecatedBaseFilter
+	Mod(divisor, remainder uint) filter.Filter
+	Eq(value uint) filter.Filter
+	Ne(value uint) filter.Filter
+	NeField(f filter.ComparableFilterField[uint]) filter.Filter
+	EqField(f filter.ComparableFilterField[uint]) filter.Filter
+	Gte(value uint) filter.Filter
+	Lte(value uint) filter.Filter
+	GteField(f filter.ComparableFilterField[uint]) filter.Filter
+	LteField(f filter.ComparableFilterField[uint]) filter.Filter
+	Gt(value uint) filter.Filter
+	Lt(value uint) filter.Filter
+	GtField(f filter.BaseFilterField[uint]) filter.Filter
+	LtField(f filter.BaseFilterField[uint]) filter.Filter
+	In(values []uint) filter.Filter
+	Nin(values []uint) filter.Filter
+}
+
+type uint0F interface {
+	uint0FUpdaterF
+	uint0FFilterF
+	deprecatedBaseKey
+}
+
+// Deprecated: Uint0F using UintField
+type Uint0F struct {
+	UnIntegerField[uint, int]
+}
+
+// Deprecated: Min using: updater.BaseUpdater[].SetMin
+func (f *Uint0F) Min(value uint) updater.Updater {
+	return f.SetMin(value)
+}
+
+// Deprecated: Max using: updater.BaseUpdater[].SetMax
+func (f *Uint0F) Max(value uint) updater.Updater {
+	return f.SetMax(value)
+}
+
+// Deprecated: SetOnIns using: updater.BaseUpdater[].SetOnInsert
+func (f *Uint0F) SetOnIns(value uint) updater.Updater {
+	return f.SetOnInsert(value)
+}
+
+// Deprecated: NewUint0F using NewUintField
+func NewUint0F(fName string) *Uint0F {
+	return &Uint0F{NewUintField(fName)}
+}
+
+// Deprecated:
+type (
+	Uint0FUpdaterF = Uint0F
+	Uint0FFilterF  = Uint0F
+)
+
+var (
+	_ uint0F         = &Uint0F{}
+	_ uint0FUpdaterF = &Uint0F{}
+	_ uint0FFilterF  = &Uint0F{}
+)
+
+type uint1Field struct {
+	*depTypeArrayField[uint, UintField]
+}
+
+// Deprecated: Push using ArrayField[].Push
+func (da *uint1Field) Push(value uint) updater.Updater {
+	return da.ArrayComparableField.Push([]uint{value})
+}
+
+// Deprecated: Uint1Field using ArrayComparableField[uint, UintField]
+type Uint1Field interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	EleAt(index int) Uint0F
+	EleOne() Uint0F
+	EleThat() Uint0FUpdaterF
+	EleAll() Uint0FUpdaterF
+	EleByFid(identifier string) Uint0FUpdaterF
+	DeclFid(identifier string) Uint0FFilterF
+	Include(a []uint) filter.Filter
+	Eq(a []uint) filter.Filter
+	Set(a []uint) updater.Updater
+	AddToSet(value uint) updater.Updater
+	AddToSetValues(a []uint) updater.Updater
+	Pull(value uint) updater.Updater
+	PullAll(a []uint) updater.Updater
+	Push(value uint) updater.Updater
+	PushByModifier(m updater.PushModifier, each []uint) updater.Updater
+}
+
+// Deprecated: NewInt1Field using ArrayComparableField[uint, UintField]
+func NewUint1Field(fName string) Uint1Field {
+	return &uint1Field{newDepCompAbleArrF[uint, UintField](fName, NewUintField)}
+}
+
+// Deprecated: use Int8Field instead.
+type Int80F struct {
+	IntegerField[int8]
+}
+
+// interfaces for compile-time check
+type int80F interface {
+	int80FUpdaterF
+	int80FFilterF
+	deprecatedBaseKey
+}
+
+type int80FUpdaterF interface {
+	Inc(num int8) updater.Updater
+	Mul(num int8) updater.Updater
+	Set(value int8) updater.Updater
+	Min(value int8) updater.Updater
+	Max(value int8) updater.Updater
+	SetOnIns(value int8) updater.Updater
+}
+
+type int80FFilterF interface {
+	Eq(value int8) filter.Filter
+	Ne(value int8) filter.Filter
+	Gt(value int8) filter.Filter
+	Lt(value int8) filter.Filter
+	Gte(value int8) filter.Filter
+	Lte(value int8) filter.Filter
+	In(values []int8) filter.Filter
+	Nin(values []int8) filter.Filter
+	Mod(divisor, remainder int8) filter.Filter
+	EqField(f filter.ComparableFilterField[int8]) filter.Filter
+	NeField(f filter.ComparableFilterField[int8]) filter.Filter
+	GtField(f filter.BaseFilterField[int8]) filter.Filter
+	LtField(f filter.BaseFilterField[int8]) filter.Filter
+	GteField(f filter.ComparableFilterField[int8]) filter.Filter
+	LteField(f filter.ComparableFilterField[int8]) filter.Filter
+}
+
+// compile-time interface checks
+var _ int80F = &Int80F{}
+var _ int80FUpdaterF = &Int80F{}
+var _ int80FFilterF = &Int80F{}
+
+// Deprecated: use NewInt8Field instead.
+func NewInt80F(fieldName string) *Int80F {
+	return &Int80F{NewInt8Field(fieldName)}
+}
+
+// Deprecated: use SetMin instead.
+func (i *Int80F) Min(value int8) updater.Updater {
+	return i.SetMin(value)
+}
+
+// Deprecated: use SetMax instead.
+func (i *Int80F) Max(value int8) updater.Updater {
+	return i.SetMax(value)
+}
+
+// Deprecated: use SetOnInsert instead.
+func (i *Int80F) SetOnIns(value int8) updater.Updater {
+	return i.SetOnInsert(value)
+}
+
+// Deprecated: use Int80F directly.
+type Int80FUpdaterF = Int80F
+
+// Deprecated: use Int80F directly.
+type Int80FFilterF = Int80F
+
+type int81Field struct {
+	*depTypeArrayField[int, Int8Field]
+}
+
+// Deprecated: Push using ArrayField[].Push
+func (da *int81Field) Push(value int) updater.Updater {
+	return da.ArrayComparableField.Push([]int{value})
+}
+
+// Deprecated: Int81Field using ArrayComparableField[int, Int8Field]
+type Int81Field interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	EleAt(index int) Int80F
+	EleOne() Int80F
+	EleThat() Int80FUpdaterF
+	EleAll() Int80FUpdaterF
+	EleByFid(identifier string) Int80FUpdaterF
+	DeclFid(identifier string) Int80FFilterF
+	Include(a []int) filter.Filter
+	Eq(a []int) filter.Filter
+	Set(a []int) updater.Updater
+	AddToSet(value int) updater.Updater
+	AddToSetValues(a []int) updater.Updater
+	Pull(value int) updater.Updater
+	PullAll(a []int) updater.Updater
+	Push(value int) updater.Updater
+	PushByModifier(m updater.PushModifier, each []int) updater.Updater
+}
+
+// Deprecated: NewInt81Field using ArrayComparableField[int, UintField]
+func NewInt81Field(fName string) Int81Field {
+	return &int81Field{newDepCompAbleArrF[int, Int8Field](fName, NewInt8Field)}
+}
+
+// Deprecated: use Int16Field instead.
+type Int160F struct {
+	IntegerField[int16]
+}
+
+// interfaces for compile-time check
+type int160F interface {
+	int160FUpdaterF
+	int160FFilterF
+	deprecatedBaseKey
+}
+
+type int160FUpdaterF interface {
+	Inc(num int16) updater.Updater
+	Mul(num int16) updater.Updater
+	Set(value int16) updater.Updater
+	Min(value int16) updater.Updater
+	Max(value int16) updater.Updater
+	SetOnIns(value int16) updater.Updater
+}
+
+type int160FFilterF interface {
+	Eq(value int16) filter.Filter
+	Ne(value int16) filter.Filter
+	Gt(value int16) filter.Filter
+	Lt(value int16) filter.Filter
+	Gte(value int16) filter.Filter
+	Lte(value int16) filter.Filter
+	In(values []int16) filter.Filter
+	Nin(values []int16) filter.Filter
+	Mod(divisor, remainder int16) filter.Filter
+	EqField(f filter.ComparableFilterField[int16]) filter.Filter
+	NeField(f filter.ComparableFilterField[int16]) filter.Filter
+	GtField(f filter.BaseFilterField[int16]) filter.Filter
+	LtField(f filter.BaseFilterField[int16]) filter.Filter
+	GteField(f filter.ComparableFilterField[int16]) filter.Filter
+	LteField(f filter.ComparableFilterField[int16]) filter.Filter
+}
+
+// compile-time interface checks
+var _ int160F = &Int160F{}
+var _ int160FUpdaterF = &Int160F{}
+var _ int160FFilterF = &Int160F{}
+
+// Deprecated: use NewInt16Field instead.
+func NewInt160F(fieldName string) *Int160F {
+	return &Int160F{NewInt16Field(fieldName)}
+}
+
+// Deprecated: use SetMin instead.
+func (i *Int160F) Min(value int16) updater.Updater {
+	return i.SetMin(value)
+}
+
+// Deprecated: use SetMax instead.
+func (i *Int160F) Max(value int16) updater.Updater {
+	return i.SetMax(value)
+}
+
+// Deprecated: use SetOnInsert instead.
+func (i *Int160F) SetOnIns(value int16) updater.Updater {
+	return i.SetOnInsert(value)
+}
+
+// Deprecated: use Int16Field directly.
+type Int160FUpdaterF = Int160F
+
+// Deprecated: use Int16Field directly.
+type Int160FFilterF = Int160F
+
+type int161Field struct {
+	*depTypeArrayField[int16, Int16Field]
+}
+
+// Deprecated: Push using ArrayField[].Push
+func (da *int161Field) Push(value int16) updater.Updater {
+	return da.ArrayComparableField.Push([]int16{value})
+}
+
+// Deprecated: Int161Field using ArrayComparableField[int16, Int16Field]
+type Int161Field interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	EleAt(index int) Int160F
+	EleOne() Int160F
+	EleThat() Int160FUpdaterF
+	EleAll() Int160FUpdaterF
+	EleByFid(identifier string) Int160FUpdaterF
+	DeclFid(identifier string) Int160FFilterF
+	Include(a []int16) filter.Filter
+	Eq(a []int16) filter.Filter
+	Set(a []int16) updater.Updater
+	AddToSet(value int16) updater.Updater
+	AddToSetValues(a []int16) updater.Updater
+	Pull(value int16) updater.Updater
+	PullAll(a []int16) updater.Updater
+	Push(value int16) updater.Updater
+	PushByModifier(m updater.PushModifier, each []int16) updater.Updater
+}
+
+// Deprecated: NewInt161Field using ArrayComparableField[int16, Int16Field]
+func NewInt161Field(fName string) Int161Field {
+	return &int161Field{newDepCompAbleArrF[int16, Int16Field](fName, NewInt16Field)}
+}
+
+// Deprecated: use Int32Field instead.
+type Int320F struct {
+	IntegerField[int32]
+}
+
+// interfaces for compile-time check
+type int320F interface {
+	int320FUpdaterF
+	int320FFilterF
+	deprecatedBaseKey
+}
+
+type int320FUpdaterF interface {
+	Inc(num int32) updater.Updater
+	Mul(num int32) updater.Updater
+	Set(value int32) updater.Updater
+	Min(value int32) updater.Updater
+	Max(value int32) updater.Updater
+	SetOnIns(value int32) updater.Updater
+}
+
+type int320FFilterF interface {
+	Eq(value int32) filter.Filter
+	Ne(value int32) filter.Filter
+	Gt(value int32) filter.Filter
+	Lt(value int32) filter.Filter
+	Gte(value int32) filter.Filter
+	Lte(value int32) filter.Filter
+	In(values []int32) filter.Filter
+	Nin(values []int32) filter.Filter
+	Mod(divisor, remainder int32) filter.Filter
+	EqField(f filter.ComparableFilterField[int32]) filter.Filter
+	NeField(f filter.ComparableFilterField[int32]) filter.Filter
+	GtField(f filter.BaseFilterField[int32]) filter.Filter
+	LtField(f filter.BaseFilterField[int32]) filter.Filter
+	GteField(f filter.ComparableFilterField[int32]) filter.Filter
+	LteField(f filter.ComparableFilterField[int32]) filter.Filter
+}
+
+// compile-time interface checks
+var _ int320F = &Int320F{}
+var _ int320FUpdaterF = &Int320F{}
+var _ int320FFilterF = &Int320F{}
+
+// Deprecated: use NewInt32Field instead.
+func NewInt320F(fieldName string) *Int320F {
+	return &Int320F{NewInt32Field(fieldName)}
+}
+
+// Deprecated: use SetMin instead.
+func (i *Int320F) Min(value int32) updater.Updater {
+	return i.SetMin(value)
+}
+
+// Deprecated: use SetMax instead.
+func (i *Int320F) Max(value int32) updater.Updater {
+	return i.SetMax(value)
+}
+
+// Deprecated: use SetOnInsert instead.
+func (i *Int320F) SetOnIns(value int32) updater.Updater {
+	return i.SetOnInsert(value)
+}
+
+// Deprecated: use Int320F directly.
+type Int320FUpdaterF = Int320F
+
+// Deprecated: use Int320F directly.
+type Int320FFilterF = Int320F
+
+type int321Field struct {
+	*depTypeArrayField[int32, Int32Field]
+}
+
+// Deprecated: Push using ArrayField[].Push
+func (da *int321Field) Push(value int32) updater.Updater {
+	return da.ArrayComparableField.Push([]int32{value})
+}
+
+// Deprecated: Int321Field using ArrayComparableField[int32, Int32Field]
+type Int321Field interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	EleAt(index int) Int320F
+	EleOne() Int320F
+	EleThat() Int320FUpdaterF
+	EleAll() Int320FUpdaterF
+	EleByFid(identifier string) Int320FUpdaterF
+	DeclFid(identifier string) Int320FFilterF
+	Include(a []int32) filter.Filter
+	Eq(a []int32) filter.Filter
+	Set(a []int32) updater.Updater
+	AddToSet(value int32) updater.Updater
+	AddToSetValues(a []int32) updater.Updater
+	Pull(value int32) updater.Updater
+	PullAll(a []int32) updater.Updater
+	Push(value int32) updater.Updater
+	PushByModifier(m updater.PushModifier, each []int32) updater.Updater
+}
+
+// Deprecated: NewInt321Field using ArrayComparableField[int32, Int32Field]
+func NewInt321Field(fName string) Int321Field {
+	return &int321Field{newDepCompAbleArrF[int32, Int32Field](fName, NewInt32Field)}
+}
+
+// Deprecated: use Int64Field instead.
+type Int640F struct {
+	IntegerField[int64]
+}
+
+// interfaces for compile-time check
+type int640F interface {
+	int640FUpdaterF
+	int640FFilterF
+	deprecatedBaseKey
+}
+
+type int640FUpdaterF interface {
+	Inc(num int64) updater.Updater
+	Mul(num int64) updater.Updater
+	Set(value int64) updater.Updater
+	Min(value int64) updater.Updater
+	Max(value int64) updater.Updater
+	SetOnIns(value int64) updater.Updater
+}
+
+type int640FFilterF interface {
+	Eq(value int64) filter.Filter
+	Ne(value int64) filter.Filter
+	Gt(value int64) filter.Filter
+	Lt(value int64) filter.Filter
+	Gte(value int64) filter.Filter
+	Lte(value int64) filter.Filter
+	In(values []int64) filter.Filter
+	Nin(values []int64) filter.Filter
+	Mod(divisor, remainder int64) filter.Filter
+	EqField(f filter.ComparableFilterField[int64]) filter.Filter
+	NeField(f filter.ComparableFilterField[int64]) filter.Filter
+	GtField(f filter.BaseFilterField[int64]) filter.Filter
+	LtField(f filter.BaseFilterField[int64]) filter.Filter
+	GteField(f filter.ComparableFilterField[int64]) filter.Filter
+	LteField(f filter.ComparableFilterField[int64]) filter.Filter
+}
+
+// compile-time interface checks
+var _ int640F = &Int640F{}
+var _ int640FUpdaterF = &Int640F{}
+var _ int640FFilterF = &Int640F{}
+
+// Deprecated: use NewInt64Field instead.
+func NewInt640F(fieldName string) *Int640F {
+	return &Int640F{NewInt64Field(fieldName)}
+}
+
+// Deprecated: use SetMin instead.
+func (i *Int640F) Min(value int64) updater.Updater {
+	return i.SetMin(value)
+}
+
+// Deprecated: use SetMax instead.
+func (i *Int640F) Max(value int64) updater.Updater {
+	return i.SetMax(value)
+}
+
+// Deprecated: use SetOnInsert instead.
+func (i *Int640F) SetOnIns(value int64) updater.Updater {
+	return i.SetOnInsert(value)
+}
+
+// Deprecated: use Int640F directly.
+type Int640FUpdaterF = Int640F
+
+// Deprecated: use Int640F directly.
+type Int640FFilterF = Int640F
+
+type int641Field struct {
+	*depTypeArrayField[int64, Int64Field]
+}
+
+// Deprecated: Push using ArrayField[].Push
+func (da *int641Field) Push(value int64) updater.Updater {
+	return da.ArrayComparableField.Push([]int64{value})
+}
+
+// Deprecated: Int641Field using ArrayComparableField[int64, Int64Field]
+type Int641Field interface {
+	deprecatedBaseFilter
+	deprecatedBaseUpdater
+	deprecatedBaseKey
+	EleAt(index int) Int640F
+	EleOne() Int640F
+	EleThat() Int640FUpdaterF
+	EleAll() Int640FUpdaterF
+	EleByFid(identifier string) Int640FUpdaterF
+	DeclFid(identifier string) Int640FFilterF
+	Include(a []int64) filter.Filter
+	Eq(a []int64) filter.Filter
+	Set(a []int64) updater.Updater
+	AddToSet(value int64) updater.Updater
+	AddToSetValues(a []int64) updater.Updater
+	Pull(value int64) updater.Updater
+	PullAll(a []int64) updater.Updater
+	Push(value int64) updater.Updater
+	PushByModifier(m updater.PushModifier, each []int64) updater.Updater
+}
+
+// Deprecated: NewInt641Field using ArrayComparableField[int64, Int64Field]
+func NewInt641Field(fName string) Int641Field {
+	return &int641Field{newDepCompAbleArrF[int64, Int64Field](fName, NewInt64Field)}
+}

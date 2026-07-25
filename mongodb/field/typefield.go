@@ -41,10 +41,10 @@ type Int64Field = IntegerField[int64]
 
 var (
 	NewIntField   = NewIntegerField[int]
-	NewInt8Field  = NewIntegerField[int]
-	NewInt16Field = NewIntegerField[int]
-	NewInt32Field = NewIntegerField[int]
-	NewInt64Field = NewIntegerField[int]
+	NewInt8Field  = NewIntegerField[int8]
+	NewInt16Field = NewIntegerField[int16]
+	NewInt32Field = NewIntegerField[int32]
+	NewInt64Field = NewIntegerField[int64]
 )
 
 type UnInteger interface {
