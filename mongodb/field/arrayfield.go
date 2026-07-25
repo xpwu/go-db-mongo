@@ -53,7 +53,7 @@ type ArrayBaseField[T any, ElemField mongodb.Field] interface {
 	// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-for-an-element-by-the-array-index-position
 	//
 	// https://www.mongodb.com/docs/manual/reference/operator/update/set/#set-elements-in-arrays
-	AtPos(pos int) (elem *ElemField)
+	AtPos(pos int) (elem ElemField)
 
 	// Elems returns all elements of the array, used only for creating filters.
 	//
@@ -62,7 +62,7 @@ type ArrayBaseField[T any, ElemField mongodb.Field] interface {
 	// 2. When followed by a positive condition (e.g., $eq, $in, $gte), it behaves as "any element".
 	//
 	// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-an-array-with-compound-filter-conditions-on-the-array-elements
-	Elems() (elem *ElemField)
+	Elems() (elem ElemField)
 
 	// AtVirPos returns the element at the position specified by the callback function.
 	//
@@ -73,7 +73,7 @@ type ArrayBaseField[T any, ElemField mongodb.Field] interface {
 	// op: $[<identifier>]
 	//
 	// https://www.mongodb.com/docs/manual/reference/operator/update/positional-filtered/
-	AtVirPos(f func(elem *ElemField) VirPos) (elem *ElemField, arrayFilter ArrayFilter)
+	AtVirPos(f func(elem ElemField) VirPos) (elem ElemField, arrayFilter ArrayFilter)
 
 	// FirstMatched returns the first element of the array that matches the filter document in updateXXX.
 	//
@@ -98,7 +98,7 @@ type ArrayBaseField[T any, ElemField mongodb.Field] interface {
 	//  5. The updater created by the returned elem behaves ambiguously when filtering on multiple array fields.
 	//
 	// https://www.mongodb.com/docs/manual/reference/operator/update/positional/#behavior
-	FirstMatched() (elem *ElemField)
+	FirstMatched() (elem ElemField)
 
 	// UpdateAll returns a delegated elem for updating all elements of the array.
 	//
@@ -110,7 +110,7 @@ type ArrayBaseField[T any, ElemField mongodb.Field] interface {
 	//    2. The returned elem can be used for queries that traverse more than one array and nested arrays.
 	//
 	// https://www.mongodb.com/docs/manual/reference/operator/update/positional-all/#definition
-	UpdateAll() (elems *ElemField)
+	UpdateAll() (elems ElemField)
 }
 
 type ArrayBaseFilter[T any, ElemField mongodb.Field] interface {
@@ -139,7 +139,7 @@ type ArrayBaseFilter[T any, ElemField mongodb.Field] interface {
 	//	op: { dim_cm: { $elemMatch: { $gt: 22, $lt: 30 } } }
 	//
 	// https://www.mongodb.com/docs/manual/tutorial/query-arrays/#query-for-an-array-element-that-meets-multiple-criteria
-	SameElemMeet(f func(theOne *ElemField) filter.Filter) filter.Filter
+	SameElemMeet(f func(theOne ElemField) filter.Filter) filter.Filter
 
 	// PosElemMeet Element at a fixed index must satisfy all filters.
 	//
@@ -181,7 +181,7 @@ type ArrayBaseFilter[T any, ElemField mongodb.Field] interface {
 	//	]
 	//
 	// https://www.mongodb.com/docs/manual/reference/operator/query/all/#use--all-with--elemmatch
-	CoverVirValues(f func(sameElem *ElemField) []VirValue) filter.Filter
+	CoverVirValues(f func(sameElem ElemField) []VirValue) filter.Filter
 }
 
 type ArrayComparableFilter[T comparable, ElemField mongodb.Field] interface {
@@ -234,7 +234,7 @@ type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
 	//	  { $pull: { results: { answers: { $elemMatch: { q: 2, a: { $gte: 8 } } } } } }
 	//
 	// https://www.mongodb.com/docs/manual/reference/operator/update/pull/#examples
-	RemoveVirValue(func(elem *ElemField) VirValue) updater.Updater
+	RemoveVirValue(func(elem ElemField) VirValue) updater.Updater
 
 	// Push appends multiple values to the array field
 	//
@@ -263,7 +263,7 @@ type ArrayBaseUpdater[T any, ElemField mongodb.Field] interface {
 	// 4. Store the array.
 	//
 	// https://www.mongodb.com/docs/manual/reference/operator/update/push/#use--push-operator-with-multiple-modifiers
-	PushWith(values []T, f func(elem *ElemField) updater.PushModifier) updater.Updater
+	PushWith(values []T, f func(elem ElemField) updater.PushModifier) updater.Updater
 }
 
 type ArrayComparableUpdater[T comparable, ElemField mongodb.Field] interface {
@@ -293,22 +293,22 @@ type ArrayComparableField[T any, ElemField mongodb.Field] interface {
 
 type arrayBaseField[T any, ElemField mongodb.Field] struct {
 	baseField[[]T]
-	newElemField func(name string) *ElemField
+	newElemField func(name string) ElemField
 }
 
 func NewArrayField[T any, ElemField mongodb.Field](name string,
-	newElem func(name string) *ElemField) ArrayField[T, ElemField] {
+	newElem func(name string) ElemField) ArrayField[T, ElemField] {
 
 	return NewArrayComparableField[T](name, newElem)
 }
 
 func NewArrayComparableField[T any, ElemField mongodb.Field](name string,
-	newElem func(name string) *ElemField) ArrayComparableField[T, ElemField] {
+	newElem func(name string) ElemField) ArrayComparableField[T, ElemField] {
 
 	return &arrayBaseField[T, ElemField]{baseField[[]T]{name: name}, newElem}
 }
 
-func (a *arrayBaseField[T, ElemField]) AtPos(pos int) *ElemField {
+func (a *arrayBaseField[T, ElemField]) AtPos(pos int) ElemField {
 	return a.newElemField(fmt.Sprintf("%s.%d", a.FullName(), pos))
 }
 
@@ -332,7 +332,7 @@ func (a *arrayBaseField[T, ElemField]) RemoveValues(values []T) updater.Updater 
 	return updater.New(a, "$pullAll", values)
 }
 
-func (a *arrayBaseField[T, ElemField]) RemoveVirValue(f func(sameElem *ElemField) VirValue) updater.Updater {
+func (a *arrayBaseField[T, ElemField]) RemoveVirValue(f func(sameElem ElemField) VirValue) updater.Updater {
 	fil := f(a.newElemField(""))
 	return updater.PullByFilter(a, fil)
 }
@@ -342,20 +342,20 @@ func (a *arrayBaseField[T, ElemField]) Push(values []T) updater.Updater {
 }
 
 func (a *arrayBaseField[T, ElemField]) PushWith(values []T,
-	f func(elem *ElemField) updater.PushModifier) updater.Updater {
+	f func(elem ElemField) updater.PushModifier) updater.Updater {
 
 	return updater.PushByModifier(a, f(a.newElemField("")), values)
 }
 
-func (a *arrayBaseField[T, ElemField]) AnyElemMeet(f func(anyElem *ElemField) filter.Filter) filter.Filter {
+func (a *arrayBaseField[T, ElemField]) AnyElemMeet(f func(anyElem ElemField) filter.Filter) filter.Filter {
 	return f(a.newElemField(a.FullName()))
 }
 
-func (a *arrayBaseField[T, ElemField]) Elems() *ElemField {
+func (a *arrayBaseField[T, ElemField]) Elems() ElemField {
 	return a.newElemField(a.FullName())
 }
 
-func (a *arrayBaseField[T, ElemField]) SameElemMeet(f func(theOne *ElemField) filter.Filter) filter.Filter {
+func (a *arrayBaseField[T, ElemField]) SameElemMeet(f func(theOne ElemField) filter.Filter) filter.Filter {
 	fil := f(a.newElemField(""))
 	return filter.SameElemMatch(a, fil)
 }
@@ -364,24 +364,24 @@ func (a *arrayBaseField[T, ElemField]) CoverValues(values []T) filter.Filter {
 	return filter.New(a, "$all", values)
 }
 
-func (a *arrayBaseField[T, ElemField]) CoverVirValues(f func(sameElem *ElemField) []VirValue) filter.Filter {
+func (a *arrayBaseField[T, ElemField]) CoverVirValues(f func(sameElem ElemField) []VirValue) filter.Filter {
 	virValues := f(a.newElemField(""))
 	return filter.New(a, "$all", virValues)
 }
 
 var counter atomic.Uint64
 
-func (a *arrayBaseField[T, ElemField]) AtVirPos(f func(elem *ElemField) VirPos) (elem *ElemField, arrayFilter ArrayFilter) {
+func (a *arrayBaseField[T, ElemField]) AtVirPos(f func(elem ElemField) VirPos) (elem ElemField, arrayFilter ArrayFilter) {
 	// The <identifier> must begin with a lowercase letter and contain only alphanumeric characters.
 	id := fmt.Sprintf("id%d", counter.Add(1))
 	flt := f(a.newElemField(id))
 	return a.newElemField(fmt.Sprintf("%s.$[%s]", a.FullName(), id)), flt
 }
 
-func (a *arrayBaseField[T, ElemField]) FirstMatched() (elem *ElemField) {
+func (a *arrayBaseField[T, ElemField]) FirstMatched() (elem ElemField) {
 	return a.newElemField(fmt.Sprintf("%s.$", a.FullName()))
 }
 
-func (a *arrayBaseField[T, ElemField]) UpdateAll() (elem *ElemField) {
+func (a *arrayBaseField[T, ElemField]) UpdateAll() (elem ElemField) {
 	return a.newElemField(fmt.Sprintf("%s.$[]", a.FullName()))
 }
