@@ -1,6 +1,7 @@
 package field
 
 import (
+	"fmt"
 	"github.com/xpwu/go-db-mongo/mongodb"
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
 	"github.com/xpwu/go-db-mongo/mongodb/index"
@@ -168,4 +169,15 @@ type BinaryField interface {
 
 func NewBinaryField(name string) BinaryField {
 	return &BaseField[bson.Binary]{name}
+}
+
+func SubField(selfName, fieldName string) string {
+	if selfName == "" {
+		return fieldName
+	}
+	if fieldName == "" {
+		return selfName
+	}
+
+	return fmt.Sprintf("%s.%s", selfName, fieldName)
 }
