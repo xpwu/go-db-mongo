@@ -122,7 +122,7 @@ func (a *Array) SameEleMatch(f filter.Filter) filter.Filter {
 var (
 	NewArray func(fName string) *Array = func(fName string) *Array {
 		return &Array{NewArrayField[any, mongodb.Field](fName, func(name string) mongodb.Field {
-			return &baseField[any]{name: name}
+			return &BaseField[any]{name: name}
 		})}
 	}
 

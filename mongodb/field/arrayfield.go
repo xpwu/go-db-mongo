@@ -296,26 +296,26 @@ type ArrayComparableField[T any, ElemField mongodb.Field] interface {
 }
 
 type arrayBaseField[T any, ElemField mongodb.Field] struct {
-	baseField[[]T]
+	BaseField[[]T]
 	newElemField func(name string) ElemField
 }
 
 func NewArrayField[T any, ElemField mongodb.Field](name string,
 	newElem func(name string) ElemField) ArrayField[T, ElemField] {
 
-	return &arrayBaseField[T, ElemField]{baseField[[]T]{name: name}, newElem}
+	return &arrayBaseField[T, ElemField]{BaseField[[]T]{name: name}, newElem}
 }
 
 func NewArrayComparableField[T comparable, ElemField mongodb.Field](name string,
 	newElem func(name string) ElemField) ArrayComparableField[T, ElemField] {
 
-	return &arrayBaseField[T, ElemField]{baseField[[]T]{name: name}, newElem}
+	return &arrayBaseField[T, ElemField]{BaseField[[]T]{name: name}, newElem}
 }
 
 func NewArrayEqualAbleField[T filter.EqualAble[T], ElemField mongodb.Field](name string,
 	newElem func(name string) ElemField) ArrayComparableField[T, ElemField] {
 
-	return &arrayBaseField[T, ElemField]{baseField[[]T]{name: name}, newElem}
+	return &arrayBaseField[T, ElemField]{BaseField[[]T]{name: name}, newElem}
 }
 
 func (a *arrayBaseField[T, ElemField]) AtPos(pos int) ElemField {

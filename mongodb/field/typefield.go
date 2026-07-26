@@ -25,12 +25,12 @@ type IntegerField[T Integer] interface {
 	index.BaseKey
 }
 
-func (b *baseField[T]) Mod(divisor, remainder T) filter.Filter {
+func (b *BaseField[T]) Mod(divisor, remainder T) filter.Filter {
 	return filter.New(b, "$mod", bson.A{divisor, remainder})
 }
 
 func NewIntegerField[T Integer](name string) IntegerField[T] {
-	return &baseField[T]{name}
+	return &BaseField[T]{name}
 }
 
 type IntField = IntegerField[int]
@@ -59,7 +59,7 @@ type UnIntegerField[T UnInteger, VT Integer] interface {
 }
 
 type unIntegerField[T UnInteger, VT Integer] struct {
-	baseField[T]
+	BaseField[T]
 }
 
 func (u *unIntegerField[T, VT]) Inc(num VT) updater.Updater {
@@ -67,7 +67,7 @@ func (u *unIntegerField[T, VT]) Inc(num VT) updater.Updater {
 }
 
 func NewUnIntegerField[T UnInteger, VT Integer](name string) UnIntegerField[T, VT] {
-	return &unIntegerField[T, VT]{baseField[T]{name}}
+	return &unIntegerField[T, VT]{BaseField[T]{name}}
 }
 
 type UintField = UnIntegerField[uint, int]
@@ -99,7 +99,7 @@ type StringField interface {
 }
 
 type stringField struct {
-	baseField[string]
+	BaseField[string]
 }
 
 func (s *stringField) Regex(regex bson.Regex) filter.Filter {
@@ -107,7 +107,7 @@ func (s *stringField) Regex(regex bson.Regex) filter.Filter {
 }
 
 func NewStringField(name string) StringField {
-	return &stringField{baseField[string]{name}}
+	return &stringField{BaseField[string]{name}}
 }
 
 type ComparableField[T ~bool | bson.ObjectID] interface {
@@ -118,7 +118,7 @@ type ComparableField[T ~bool | bson.ObjectID] interface {
 }
 
 func NewComparableField[T ~bool | bson.ObjectID](name string) ComparableField[T] {
-	return &baseField[T]{name}
+	return &BaseField[T]{name}
 }
 
 type BoolField = ComparableField[bool]
@@ -137,7 +137,7 @@ type ComputableField[T ~float32 | ~float64] interface {
 }
 
 func NewComputableField[T ~float32 | ~float64](name string) ComputableField[T] {
-	return &baseField[T]{name}
+	return &BaseField[T]{name}
 }
 
 type Float32Field = ComputableField[float32]
@@ -156,7 +156,7 @@ type Decimal128Field interface {
 }
 
 func NewDecimal128Field(name string) Decimal128Field {
-	return &baseField[bson.Decimal128]{name}
+	return &BaseField[bson.Decimal128]{name}
 }
 
 type BinaryField interface {
@@ -167,5 +167,5 @@ type BinaryField interface {
 }
 
 func NewBinaryField(name string) BinaryField {
-	return &baseField[bson.Binary]{name}
+	return &BaseField[bson.Binary]{name}
 }
