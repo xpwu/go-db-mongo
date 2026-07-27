@@ -6,6 +6,7 @@ import (
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
 	"github.com/xpwu/go-db-mongo/mongodb/tagparser"
 	"github.com/xpwu/go-db-mongo/mongodb/updater"
+	"github.com/xpwu/go-db-mongo/mongodb/x"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"os"
 	"path"
@@ -40,10 +41,6 @@ type TypeInfo struct {
 	NewField ReflectType
 }
 
-func TypeFor[T any]() reflect.Type {
-	return reflect.TypeOf((*T)(nil)).Elem()
-}
-
 func NewTypeInfo[T any, FieldType mongodb.Field](creator func(name string) FieldType) TypeInfo {
 	name := runtime.FuncForPC(reflect.ValueOf(creator).Pointer()).Name()
 	f := strings.FieldsFunc(name, func(r rune) bool {
@@ -55,13 +52,13 @@ func NewTypeInfo[T any, FieldType mongodb.Field](creator func(name string) Field
 
 	funName := &reflectType{pkg: strings.Join(f[:len(f)-1], "."), name: f[len(f)-1]}
 
-	return TypeInfo{TypeFor[T](), TypeFor[FieldType](), funName}
+	return TypeInfo{x.TypeFor[T](), x.TypeFor[FieldType](), funName}
 }
 
 func typeFieldInfo[T any](field, creator string) TypeInfo {
-	return TypeInfo{TypeFor[T](),
-		&reflectType{name: field, pkg: TypeFor[BaseField]().PkgPath()},
-		&reflectType{name: creator, pkg: TypeFor[BaseField]().PkgPath()}}
+	return TypeInfo{x.TypeFor[T](),
+		&reflectType{name: field, pkg: x.TypeFor[BaseField]().PkgPath()},
+		&reflectType{name: creator, pkg: x.TypeFor[BaseField]().PkgPath()}}
 }
 
 type CollBuilder struct {
@@ -295,10 +292,10 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 	s := &st{
 		Pkg:          path.Base(b.pkg),
 		Name:         t.Name(),
-		FilterAlias:  thisImports.add(TypeFor[filter.ComparableFilter]().PkgPath()),
-		FieldAlias:   thisImports.add(TypeFor[BaseField]().PkgPath()),
-		MongoAlias:   thisImports.add(TypeFor[mongodb.Field]().PkgPath()),
-		UpdaterAlias: thisImports.add(TypeFor[updater.BaseUpdater]().PkgPath()),
+		FilterAlias:  thisImports.add(x.TypeFor[filter.ComparableFilter]().PkgPath()),
+		FieldAlias:   thisImports.add(x.TypeFor[BaseField]().PkgPath()),
+		MongoAlias:   thisImports.add(x.TypeFor[mongodb.Field]().PkgPath()),
+		UpdaterAlias: thisImports.add(x.TypeFor[updater.BaseUpdater]().PkgPath()),
 	}
 
 	for i := 0; i < t.NumField(); i++ {
