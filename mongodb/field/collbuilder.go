@@ -2,6 +2,9 @@ package field
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/xpwu/go-db-mongo/mongodb"
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
@@ -78,13 +81,15 @@ type CollBuilder struct {
 
 	structCtx *structContext
 
-	useJSONStructTags bool
-	lowerField        bool
+	opt *builderOption
 }
 
 type builderOption struct {
 	useJSONStructTags bool
 	lowerField        bool
+	ignoreTagErr      bool
+	dir               string
+	targetPkg         string
 }
 
 type BuilderOption func(option *builderOption)
@@ -101,19 +106,34 @@ func LowerField() BuilderOption {
 	}
 }
 
+// IgnoreTagErr 忽略 minsize & truncate & omitempty tag的报错
+func IgnoreTagErr() BuilderOption {
+	return func(option *builderOption) {
+		option.ignoreTagErr = true
+	}
+}
+
+func WithDirAndPkg(dir, pkg string) BuilderOption {
+	return func(option *builderOption) {
+		option.dir = dir
+		option.targetPkg = pkg
+	}
+}
+
 func NewBuilder(opts ...BuilderOption) *CollBuilder {
-	op := &builderOption{useJSONStructTags: false, lowerField: false}
+	op := &builderOption{
+		useJSONStructTags: false,
+		lowerField:        false,
+		ignoreTagErr:      false,
+	}
 	for _, f := range opts {
 		f(op)
 	}
 
 	b := &CollBuilder{
-		typeMap:           make(map[reflect.Type]TypeInfo),
-		kindMap:           make(map[reflect.Kind]func(reflect.Type) (TypeInfo, bool)),
-		useJSONStructTags: op.useJSONStructTags,
-		lowerField:        op.lowerField,
-		// todo  get targetPkg
-		targetPkg: x.TypeFor[CollBuilder]().PkgPath(),
+		typeMap: make(map[reflect.Type]TypeInfo),
+		kindMap: make(map[reflect.Kind]func(reflect.Type) (TypeInfo, bool)),
+		opt:     op,
 	}
 
 	b.RegisterType(typeFieldInfo[int]("IntField", "NewIntField", true))
@@ -176,9 +196,45 @@ func (b *CollBuilder) build(rt reflect.Type) (ft TypeInfo, ok bool) {
 	return
 }
 
+func getRuntimeInfo() (pkg, dir string) {
+	pc, file, _, ok := runtime.Caller(1)
+	if ok {
+		fName := runtime.FuncForPC(pc).Name()
+		f := strings.FieldsFunc(fName, func(r rune) bool {
+			if r == '.' {
+				return true
+			}
+			return false
+		})
+
+		pkg = strings.Join(f[:len(f)-1], ".")
+
+		dir = path.Dir(file)
+	}
+	return
+}
+
+func BuildColl[T any](builder *CollBuilder) {
+	if builder.opt.dir == "" || builder.opt.targetPkg == "" {
+		builder.targetPkg, builder.dir = getRuntimeInfo()
+	} else {
+		builder.targetPkg = builder.opt.targetPkg
+		builder.dir = builder.opt.dir
+	}
+
+	builder.Build(x.TypeFor[T]())
+}
+
 func (b *CollBuilder) Build(rt reflect.Type) {
 	if rt.Kind() == reflect.Ptr {
 		rt = rt.Elem()
+	}
+
+	if b.opt.dir == "" || b.opt.targetPkg == "" {
+		b.targetPkg, b.dir = getRuntimeInfo()
+	} else {
+		b.targetPkg = b.opt.targetPkg
+		b.dir = b.opt.dir
 	}
 
 	//b.targetPkg = rt.PkgPath()
@@ -479,10 +535,21 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 		if f.PkgPath != "" {
 			continue
 		}
-		// todo check minsize & Truncate & omitempty
-		tag, _ := tagparser.ParseStruct(f, b.lowerField, b.useJSONStructTags)
+		tag, _ := tagparser.ParseStruct(f, b.opt.lowerField, b.opt.useJSONStructTags)
 		if tag.Skip {
 			continue
+		}
+		if !b.opt.lowerField && (tag.OmitEmpty || tag.MinSize || tag.Truncate) && !b.opt.ignoreTagErr {
+			if !b.opt.ignoreTagErr {
+				panic(errors.New(fmt.Sprintf(
+					"NOT supported tag: minsize & truncate & omitempty are used in %s.%s.%s. \n"+
+						"Using IgnoreTagErr() can ignore the error",
+					t.PkgPath(), t.Name(), f.Name)))
+			} else {
+				println(fmt.Sprintf(
+					"NOT supported tag: minsize & truncate & omitempty are used in %s.%s.%s.",
+					t.PkgPath(), t.Name(), f.Name))
+			}
 		}
 		fd := Field{}
 		fd.MethodName = f.Name
@@ -507,7 +574,7 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 
 	s.Imports = thisImports.all()
 
-	file, err := os.Create("z" + s.Name + "Field.go")
+	file, err := os.Create(fmt.Sprintf("%s/z%sField_%s.go", b.dir, t.Name(), base6408(t.PkgPath())))
 	if err != nil {
 		panic(err)
 	}
@@ -525,4 +592,10 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 	}
 
 	return ft, true
+}
+
+func base6408(s string) string {
+	sha256v := sha256.Sum256([]byte(s))
+	r := base64.StdEncoding.EncodeToString(sha256v[:])
+	return r[0:8]
 }
