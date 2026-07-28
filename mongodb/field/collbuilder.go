@@ -1,6 +1,7 @@
 package field
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/xpwu/go-db-mongo/mongodb"
 	"github.com/xpwu/go-db-mongo/mongodb/filter"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -36,9 +38,11 @@ func (r *reflectType) PkgPath() string {
 }
 
 type TypeInfo struct {
-	T        reflect.Type
-	Field    ReflectType
-	NewField ReflectType
+	T     reflect.Type
+	Field ReflectType
+	// NewField func(name string) FieldType
+	NewField  ReflectType
+	EqualAble bool
 }
 
 func NewTypeInfo[T any, FieldType mongodb.Field](creator func(name string) FieldType) TypeInfo {
@@ -51,49 +55,88 @@ func NewTypeInfo[T any, FieldType mongodb.Field](creator func(name string) Field
 	})
 
 	funName := &reflectType{pkg: strings.Join(f[:len(f)-1], "."), name: f[len(f)-1]}
+	equalAble := x.TypeFor[FieldType]().Implements(x.TypeFor[filter.ComparableFilterField]())
 
-	return TypeInfo{x.TypeFor[T](), x.TypeFor[FieldType](), funName}
+	return TypeInfo{x.TypeFor[T](), x.TypeFor[FieldType](), funName, equalAble}
 }
 
-func typeFieldInfo[T any](field, creator string) TypeInfo {
+func typeFieldInfo[T any](field, creator string, equalAble bool) TypeInfo {
 	return TypeInfo{x.TypeFor[T](),
 		&reflectType{name: field, pkg: x.TypeFor[BaseField]().PkgPath()},
-		&reflectType{name: creator, pkg: x.TypeFor[BaseField]().PkgPath()}}
+		&reflectType{name: creator, pkg: x.TypeFor[BaseField]().PkgPath()}, equalAble}
+}
+
+type structContext struct {
+	imports *allImports
 }
 
 type CollBuilder struct {
-	typeMap map[reflect.Type]TypeInfo
-	kindMap map[reflect.Kind]func(reflect.Type) (TypeInfo, bool)
-	dir     string
-	pkg     string
+	typeMap   map[reflect.Type]TypeInfo
+	kindMap   map[reflect.Kind]func(reflect.Type) (TypeInfo, bool)
+	dir       string
+	targetPkg string
+
+	structCtx *structContext
+
+	useJSONStructTags bool
+	lowerField        bool
 }
 
-func NewBuilder() *CollBuilder {
-	b := &CollBuilder{
-		typeMap: make(map[reflect.Type]TypeInfo),
-		kindMap: make(map[reflect.Kind]func(reflect.Type) (TypeInfo, bool)),
+type builderOption struct {
+	useJSONStructTags bool
+	lowerField        bool
+}
+
+type BuilderOption func(option *builderOption)
+
+func UseJsonTag() BuilderOption {
+	return func(option *builderOption) {
+		option.useJSONStructTags = true
+	}
+}
+
+func LowerField() BuilderOption {
+	return func(option *builderOption) {
+		option.lowerField = true
+	}
+}
+
+func NewBuilder(opts ...BuilderOption) *CollBuilder {
+	op := &builderOption{useJSONStructTags: false, lowerField: false}
+	for _, f := range opts {
+		f(op)
 	}
 
-	b.RegisterType(typeFieldInfo[int]("IntField", "NewIntField"))
-	b.RegisterType(typeFieldInfo[int8]("Int8Field", "NewInt8Field"))
-	b.RegisterType(typeFieldInfo[int16]("Int16Field", "NewInt16Field"))
-	b.RegisterType(typeFieldInfo[int32]("Int32Field", "NewInt32Field"))
-	b.RegisterType(typeFieldInfo[int64]("Int64Field", "NewInt64Field"))
-	b.RegisterType(typeFieldInfo[uint]("UintField", "NewUintField"))
-	b.RegisterType(typeFieldInfo[uint8]("Uint8Field", "NewUint8Field"))
-	b.RegisterType(typeFieldInfo[uint16]("Uint16Field", "NewUint16Field"))
-	b.RegisterType(typeFieldInfo[uint32]("Uint32Field", "NewUint32Field"))
-	b.RegisterType(typeFieldInfo[uint64]("Uint64Field", "NewUint64Field"))
-	b.RegisterType(typeFieldInfo[float32]("Float32Field", "NewFloat32Field"))
-	b.RegisterType(typeFieldInfo[float64]("Float64Field", "NewFloat64Field"))
-	b.RegisterType(typeFieldInfo[string]("StringField", "NewStringField"))
-	b.RegisterType(typeFieldInfo[bool]("BoolField", "NewBoolField"))
-	b.RegisterType(typeFieldInfo[bson.Binary]("BinaryField", "NewBinaryField"))
-	b.RegisterType(typeFieldInfo[bson.Decimal128]("Decimal128Field", "NewDecimal128Field"))
-	b.RegisterType(typeFieldInfo[bson.ObjectID]("ObjectIDField", "NewObjectIDField"))
+	b := &CollBuilder{
+		typeMap:           make(map[reflect.Type]TypeInfo),
+		kindMap:           make(map[reflect.Kind]func(reflect.Type) (TypeInfo, bool)),
+		useJSONStructTags: op.useJSONStructTags,
+		lowerField:        op.lowerField,
+		// todo  get targetPkg
+		targetPkg: x.TypeFor[CollBuilder]().PkgPath(),
+	}
+
+	b.RegisterType(typeFieldInfo[int]("IntField", "NewIntField", true))
+	b.RegisterType(typeFieldInfo[int8]("Int8Field", "NewInt8Field", true))
+	b.RegisterType(typeFieldInfo[int16]("Int16Field", "NewInt16Field", true))
+	b.RegisterType(typeFieldInfo[int32]("Int32Field", "NewInt32Field", true))
+	b.RegisterType(typeFieldInfo[int64]("Int64Field", "NewInt64Field", true))
+	b.RegisterType(typeFieldInfo[uint]("UintField", "NewUintField", true))
+	b.RegisterType(typeFieldInfo[uint8]("Uint8Field", "NewUint8Field", true))
+	b.RegisterType(typeFieldInfo[uint16]("Uint16Field", "NewUint16Field", true))
+	b.RegisterType(typeFieldInfo[uint32]("Uint32Field", "NewUint32Field", true))
+	b.RegisterType(typeFieldInfo[uint64]("Uint64Field", "NewUint64Field", true))
+	b.RegisterType(typeFieldInfo[float32]("Float32Field", "NewFloat32Field", false))
+	b.RegisterType(typeFieldInfo[float64]("Float64Field", "NewFloat64Field", false))
+	b.RegisterType(typeFieldInfo[string]("StringField", "NewStringField", true))
+	b.RegisterType(typeFieldInfo[bool]("BoolField", "NewBoolField", true))
+	b.RegisterType(typeFieldInfo[bson.Binary]("BinaryField", "NewBinaryField", true))
+	b.RegisterType(typeFieldInfo[bson.Decimal128]("Decimal128Field", "NewDecimal128Field", true))
+	b.RegisterType(typeFieldInfo[bson.ObjectID]("ObjectIDField", "NewObjectIDField", true))
 
 	b.RegisterKind(reflect.Struct, b.buildStruct)
-	//b.RegisterKind(reflect.Slice, b.buildSlice)
+	b.RegisterKind(reflect.Slice, b.buildSlice)
+	b.RegisterKind(reflect.Array, b.buildSlice)
 	b.RegisterKind(reflect.Ptr, b.buildPtr)
 
 	return b
@@ -138,12 +181,12 @@ func (b *CollBuilder) Build(rt reflect.Type) {
 		rt = rt.Elem()
 	}
 
-	b.pkg = rt.PkgPath()
-	if b.pkg == "" {
-		// 基本类型 就取当前的pkg, 基本类型都是预生成在此pkg中
-		// 对于其他pkg为空的类型 暂不支持
-		b.pkg = reflect.TypeOf(b).Elem().PkgPath()
-	}
+	//b.targetPkg = rt.PkgPath()
+	//if b.targetPkg == "" {
+	//	// 基本类型 就取当前的pkg, 基本类型都是预生成在此pkg中
+	//	// 对于其他pkg为空的类型 暂不支持
+	//	b.targetPkg = reflect.TypeOf(b).Elem().PkgPath()
+	//}
 
 	b.build(rt)
 }
@@ -153,6 +196,112 @@ func firstToLower(s string) string {
 		return s
 	}
 	return strings.ToLower(s[:1]) + s[1:]
+}
+
+func indentLines(s string, indents int) string {
+	// (?m) 多行模式，^(?!^) 匹配非第一行的行首
+	re := regexp.MustCompile(`(?m)^(?!^)`)
+	return re.ReplaceAllString(s, strings.Repeat("\t", indents))
+}
+
+func (b *CollBuilder) buildSlice(t reflect.Type) (ft TypeInfo, ok bool) {
+	elem := t.Elem()
+	dim := 1
+	for elem.Kind() == reflect.Slice || elem.Kind() == reflect.Array {
+		elem = elem.Elem()
+		dim++
+	}
+
+	eft, eok := b.build(elem)
+	if !eok {
+		panic(fmt.Errorf("not support %v", elem))
+	}
+
+	thisImports := b.structCtx.imports
+
+	// Array 的代码都在同一 package 下
+	arrPkg := thisImports.add(x.TypeFor[ArrayField]().PkgPath())
+
+	arrField := ""
+	if !eft.EqualAble {
+		arrField = arrPkg + x.TypeFor[ArrayField]().Name()
+	} else {
+		arrField = arrPkg + x.TypeFor[ArrayComparableField]().Name()
+	}
+
+	arrNewField := arrPkg + "NewArrayField"
+	if eft.EqualAble {
+		arrNewField = arrPkg + "NewArrayAnyComparableField"
+	}
+	//newElem := func(name string) ArrayField[[][]int, ArrayField[[]int, ArrayField[int, IntField]]] {
+	//	newElem := func(name string) ArrayField[[]int, ArrayField[int, IntField]] {
+	//		newElem := func(name string) ArrayField[int, IntField] {
+	//			newElem := NewIntField
+	//			return NewArrayField[int, IntField](name, newElem)
+	//		}
+	//		return NewArrayField[[]int, ArrayField[int, IntField]](name, newElem)
+	//	}
+	//	return NewArrayField[[][]int, ArrayField[[]int, ArrayField[int, IntField]]](name, newElem)
+	//}
+	thisNewFieldTempl := template.Must(template.New("newField").Parse(`
+func(name string) {{.ThisField}} {
+	newElem := {{.NewElemField}}
+	return {{.ArrNewField}}[{{.ElemT}}, {{.ElemField}}](name, newElem)
+}
+`))
+	type TemplData struct {
+		ThisField    string
+		NewElemField string
+		ArrNewField  string
+		ElemT        string
+		ElemField    string
+	}
+
+	newTemplData := func(thisField, newElemField, elemT, elemField string) *TemplData {
+		return &TemplData{
+			ArrNewField:  arrNewField,
+			ThisField:    thisField,
+			NewElemField: newElemField,
+			ElemField:    elemField,
+			ElemT:        elemT,
+		}
+	}
+
+	elemT := thisImports.add(eft.T.PkgPath()) + eft.T.Name()
+	elemField := thisImports.add(eft.Field.PkgPath()) + eft.Field.Name()
+	newElemField := thisImports.add(eft.NewField.PkgPath()) + eft.NewField.Name()
+
+	for i := 0; i < dim; i++ {
+		newElemField = indentLines(newElemField, 1)
+
+		thisT := fmt.Sprintf("[]%s", elemT)
+		thisField := fmt.Sprintf("%s[%s, %s]", arrField, elemT, elemField)
+		thisData := newTemplData(thisField, newElemField, elemT, elemField)
+		buf := bytes.Buffer{}
+		if err := thisNewFieldTempl.Execute(&buf, thisData); err != nil {
+			panic(err)
+		}
+		thisNewField := buf.String()
+
+		elemT = thisT
+		elemField = thisField
+		newElemField = thisNewField
+	}
+
+	ft = TypeInfo{
+		T: t,
+		Field: &reflectType{
+			name: elemField,
+			pkg:  arrPkg,
+		},
+		NewField: &reflectType{
+			name: newElemField,
+			pkg:  arrPkg,
+		},
+		EqualAble: eft.EqualAble,
+	}
+
+	return ft, true
 }
 
 var structCode2 = template.Must(template.New("structCode2").Funcs(template.FuncMap{
@@ -167,28 +316,40 @@ import ({{range .Imports}}
 {{end}})
 
 type {{.Name}}Field interface {
-	{{.MongoAlias}}.Field
-	{{.FilterAlias}}.ComparableFilter[{{.Name}}]
-	{{.UpdaterAlias}}.BaseUpdater[{{.Name}}]
+	{{.MongoAlias}}Field
+	{{.FilterAlias}}ComparableFilter[{{.Name}}]
+	{{.UpdaterAlias}}BaseUpdater[{{.Name}}]
 
 {{range .Fields}}
 	{{.MethodName}}() {{.FieldName}}
 {{end}}
+
+{{range .Inlines}}
+	{{.FiledName}}
+{{end}}
 }
 
 type {{.Name|firstToLower}}Field struct {
-	{{.FieldAlias}}.BaseField[{{.Name}}]
+	{{.FieldAlias}}BaseField[{{.Name}}]
+{{range .Inlines}}
+	{{.FiledName}}
+{{end}}
 }
 
 var {{.Name}}Coll = New{{.Name}}Field("")
 
 func New{{.Name}}Field(name string) {{.Name}}Field {
-	return &{{.Name|firstToLower}}Field{BaseField: {{.FieldAlias}}.BaseField[{{.Name}}]{name}}
+	return &{{.Name|firstToLower}}Field{
+		BaseField: {{.FieldAlias}}BaseField[{{.Name}}]{name}},
+{{range .Inlines}}
+		{{.NewField}}(name),
+{{end}}
+	}
 }
 
 {{range .Fields}}
 func (s *{{$.Name|firstToLower}}Field) {{.MethodName}}() {{.FieldName}} {
-	return {{.NewField}}({{$.FieldAlias}}.SubField(s.FullName(), "{{.TagName}}"))
+	return {{.NewField}}({{$.FieldAlias}}SubField(s.FullName(), "{{.TagName}}"))
 }
 {{end}}
 `))
@@ -225,6 +386,7 @@ func (m *allImports) exclude(paths string) {
 	m.exc[paths] = true
 }
 
+// return  `alias.`  or ``
 func (m *allImports) add(paths string) (alias string) {
 	if paths == "" || m.exc[paths] {
 		return ""
@@ -237,8 +399,7 @@ func (m *allImports) add(paths string) (alias string) {
 	a := m.alias.get(path.Base(paths))
 	m.data[paths] = a
 
-	return a
-	//return a + "."
+	return a + "."
 }
 
 type importTemp struct {
@@ -272,6 +433,11 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 		NewField   string
 	}
 
+	type Inline struct {
+		FiledName string
+		NewField  string
+	}
+
 	type st struct {
 		Pkg          string
 		Name         string
@@ -281,66 +447,82 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 		UpdaterAlias string
 		Imports      []importTemp
 		Fields       []Field
+		Inlines      []Inline
 	}
 
-	thisImports := newAllImports()
-	thisImports.exclude(b.pkg)
+	oldCtx := b.structCtx
+	defer func() {
+		b.structCtx = oldCtx
+	}()
+
+	b.structCtx = &structContext{imports: newAllImports()}
+	thisImports := b.structCtx.imports
+	thisImports.exclude(b.targetPkg)
 
 	// firstly, put this pkg into alias
-	thisImports.alias.get(path.Base(b.pkg))
+	thisImports.alias.get(path.Base(b.targetPkg))
 
 	s := &st{
-		Pkg:          path.Base(b.pkg),
+		Pkg:          path.Base(b.targetPkg),
 		Name:         t.Name(),
 		FilterAlias:  thisImports.add(x.TypeFor[filter.ComparableFilter]().PkgPath()),
 		FieldAlias:   thisImports.add(x.TypeFor[BaseField]().PkgPath()),
 		MongoAlias:   thisImports.add(x.TypeFor[mongodb.Field]().PkgPath()),
 		UpdaterAlias: thisImports.add(x.TypeFor[updater.BaseUpdater]().PkgPath()),
+		Inlines:      make([]Inline, 0),
 	}
 
+	equalAble := true
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		// unexported
 		if f.PkgPath != "" {
 			continue
 		}
-		tag, _ := tagparser.StructTagParser(f)
+		// todo check minsize & Truncate & omitempty
+		tag, _ := tagparser.ParseStruct(f, b.lowerField, b.useJSONStructTags)
 		if tag.Skip {
 			continue
 		}
 		fd := Field{}
 		fd.MethodName = f.Name
 		fd.TagName = tag.Name
-		ft, ok := b.build(f.Type)
-		if !ok {
+		subFt, subOk := b.build(f.Type)
+		if !subOk {
 			panic(fmt.Errorf("not support %v", f.Type))
 		}
-		fd.FieldName = imports.add(ft.F.PkgPath()) + ft.F.Name()
-		fd.New = imports.add(ft.NewF.PkgPath()) + ft.NewF.Name()
-
-		// inline 域能进行普通子域访问，但不能有任何操作，也不能在访问路径中添加新的嵌套字段
+		equalAble = equalAble && subFt.EqualAble
+		subFName := thisImports.add(subFt.Field.PkgPath()) + subFt.Field.Name()
+		subNewF := thisImports.add(subFt.NewField.PkgPath()) + subFt.NewField.Name()
+		// inline
 		if tag.Inline && f.Type.Kind() == reflect.Struct {
-			fd.TagName = ""
-			fd.New = imports.add(ft.NewF.PkgPath()) + ft.NewF.Name() + "Inline"
+			s.Inlines = append(s.Inlines, Inline{subFName, subNewF})
+		} else {
+			fd.FieldName = subFName
+			fd.NewField = indentLines(subNewF, 2)
 		}
+
 		s.Fields = append(s.Fields, fd)
 	}
 
 	s.Imports = thisImports.all()
 
-	file, err := os.Create("z" + s.Name + ".go")
+	file, err := os.Create("z" + s.Name + "Field.go")
 	if err != nil {
 		panic(err)
 	}
 
-	err = structCode.Execute(file, s)
+	err = structCode2.Execute(file, s)
 	if err != nil {
 		panic(err)
 	}
 
-	ft = Type{}
-	ft.F = &rTyp{s.Name, b.pkg}
-	ft.NewF = &rTyp{"New" + s.Name, b.pkg}
+	ft = TypeInfo{
+		T:         t,
+		Field:     &reflectType{name: s.Name, pkg: s.Pkg},
+		NewField:  &reflectType{name: "New" + s.Name, pkg: s.Pkg},
+		EqualAble: equalAble,
+	}
 
 	return ft, true
 }

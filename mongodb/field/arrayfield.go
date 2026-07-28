@@ -318,6 +318,12 @@ func NewArrayEqualAbleField[T filter.EqualAble[T], ElemField mongodb.Field](name
 	return &arrayBaseField[T, ElemField]{BaseField[[]T]{name: name}, newElem}
 }
 
+func NewArrayAnyComparableField[T any, ElemField mongodb.Field](name string,
+	newElem func(name string) ElemField) ArrayComparableField[T, ElemField] {
+
+	return &arrayBaseField[T, ElemField]{BaseField[[]T]{name: name}, newElem}
+}
+
 func (a *arrayBaseField[T, ElemField]) AtPos(pos int) ElemField {
 	return a.newElemField(fmt.Sprintf("%s.%d", a.FullName(), pos))
 }

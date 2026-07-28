@@ -172,4 +172,13 @@ func parseTags(key string, tag string) (*StructTags, error) {
 	return &st, nil
 }
 
+func ParseStruct(sf reflect.StructField, toLower bool, useJson bool) (*StructTags, error) {
+	if useJson {
+		return ParseJSONStructTagsToLower(sf, toLower)
+	}
+
+	return ParseStructTagsToLower(sf, toLower)
+}
+
+// Deprecated: StructTagParser using ParseStructTags
 var StructTagParser = ParseStructTags
