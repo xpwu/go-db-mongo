@@ -18,18 +18,22 @@ func StructNext(self, fName string) string {
 	return b.String()
 }
 
+// todo deprecated
+
 type StructUpdaterF struct {
-	*BaseUpdater
+	//*BaseUpdater
 }
 
 func NewStructUpdaterF(name string) *StructUpdaterF {
-	return &StructUpdaterF{&BaseUpdater{&baseField{name: name}}}
+	//return &StructUpdaterF{&BaseUpdater{&BaseField{name: name}}}
+	return &StructUpdaterF{}
 }
 
 type StructFilterF struct {
-	*BaseFilter
+	//*BaseFilter
 }
 
 func NewStructFilterF(name string) *StructFilterF {
-	return &StructFilterF{&BaseFilter{&baseField{name: name}}}
+	//return &StructFilterF{&BaseFilter{&BaseField{name: name}}}
+	return &StructFilterF{}
 }
