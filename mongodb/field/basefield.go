@@ -11,6 +11,10 @@ type BaseField[T any] struct {
 	name string
 }
 
+func NewBaseField[T any](name string) *BaseField[T] {
+	return &BaseField[T]{name: name}
+}
+
 func (b *BaseField[T]) FullName() string {
 	return b.name
 }

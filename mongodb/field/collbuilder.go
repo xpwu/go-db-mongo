@@ -15,7 +15,6 @@ import (
 	"os"
 	"path"
 	"reflect"
-	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -197,7 +196,7 @@ func (b *CollBuilder) build(rt reflect.Type) (ft TypeInfo, ok bool) {
 }
 
 func getRuntimeInfo() (pkg, dir string) {
-	pc, file, _, ok := runtime.Caller(1)
+	pc, file, _, ok := runtime.Caller(3)
 	if ok {
 		fName := runtime.FuncForPC(pc).Name()
 		f := strings.FieldsFunc(fName, func(r rune) bool {
@@ -255,9 +254,11 @@ func firstToLower(s string) string {
 }
 
 func indentLines(s string, indents int) string {
-	// (?m) 多行模式，^(?!^) 匹配非第一行的行首
-	re := regexp.MustCompile(`(?m)^(?!^)`)
-	return re.ReplaceAllString(s, strings.Repeat("\t", indents))
+	lines := strings.Split(s, "\n")
+	for i := 1; i < len(lines); i++ {
+		lines[i] = strings.Repeat("\t", indents) + lines[i]
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (b *CollBuilder) buildSlice(t reflect.Type) (ft TypeInfo, ok bool) {
@@ -280,14 +281,14 @@ func (b *CollBuilder) buildSlice(t reflect.Type) (ft TypeInfo, ok bool) {
 
 	arrField := ""
 	if !eft.EqualAble {
-		arrField = arrPkg + x.TypeFor[ArrayField[any, mongodb.Field]]().Name()
+		arrField = arrPkg + ".ArrayField"
 	} else {
-		arrField = arrPkg + x.TypeFor[ArrayComparableField[any, mongodb.Field]]().Name()
+		arrField = arrPkg + ".ArrayComparableField"
 	}
 
-	arrNewField := arrPkg + "NewArrayField"
+	arrNewField := arrPkg + ".NewArrayField"
 	if eft.EqualAble {
-		arrNewField = arrPkg + "NewArrayAnyComparableField"
+		arrNewField = arrPkg + ".NewArrayAnyComparableField"
 	}
 	//newElem := func(name string) ArrayField[[][]int, ArrayField[[]int, ArrayField[int, IntField]]] {
 	//	newElem := func(name string) ArrayField[[]int, ArrayField[int, IntField]] {
@@ -299,12 +300,11 @@ func (b *CollBuilder) buildSlice(t reflect.Type) (ft TypeInfo, ok bool) {
 	//	}
 	//	return NewArrayField[[][]int, ArrayField[[]int, ArrayField[int, IntField]]](name, newElem)
 	//}
-	thisNewFieldTempl := template.Must(template.New("newField").Parse(`
-func(name string) {{.ThisField}} {
+	thisNewFieldTempl := template.Must(template.New("newField").Parse(
+		`func(name string) {{.ThisField}} {
 	newElem := {{.NewElemField}}
 	return {{.ArrNewField}}[{{.ElemT}}, {{.ElemField}}](name, newElem)
-}
-`))
+}`))
 	type TemplData struct {
 		ThisField    string
 		NewElemField string
@@ -323,9 +323,9 @@ func(name string) {{.ThisField}} {
 		}
 	}
 
-	elemT := thisImports.add(eft.T.PkgPath()) + eft.T.Name()
-	elemField := thisImports.add(eft.Field.PkgPath()) + eft.Field.Name()
-	newElemField := thisImports.add(eft.NewField.PkgPath()) + eft.NewField.Name()
+	elemT := addDot(thisImports.add(eft.T.PkgPath())) + eft.T.Name()
+	elemField := addDot(thisImports.add(eft.Field.PkgPath())) + eft.Field.Name()
+	newElemField := addDot(thisImports.add(eft.NewField.PkgPath())) + eft.NewField.Name()
 
 	for i := 0; i < dim; i++ {
 		newElemField = indentLines(newElemField, 1)
@@ -344,15 +344,16 @@ func(name string) {{.ThisField}} {
 		newElemField = thisNewField
 	}
 
+	// pkg 已经加入 imports, 所以不需要再返回 pkg
 	ft = TypeInfo{
 		T: t,
 		Field: &reflectType{
 			name: elemField,
-			pkg:  arrPkg,
+			pkg:  "",
 		},
 		NewField: &reflectType{
 			name: newElemField,
-			pkg:  arrPkg,
+			pkg:  "",
 		},
 		EqualAble: eft.EqualAble,
 	}
@@ -367,47 +368,47 @@ var structCode2 = template.Must(template.New("structCode2").Funcs(template.FuncM
 
 package {{.Pkg}}
 
-import ({{range .Imports}}
+import ({{- range .Imports}}
   {{.Alias}} "{{.Import}}"
-{{end}})
+{{- end}}
+)
 
 type {{.Name}}Field interface {
 	{{.MongoAlias}}Field
 	{{.FilterAlias}}ComparableFilter[{{.Name}}]
 	{{.UpdaterAlias}}BaseUpdater[{{.Name}}]
-
-{{range .Fields}}
+{{- range .Fields}}
 	{{.MethodName}}() {{.FieldName}}
-{{end}}
-
-{{range .Inlines}}
+{{- end}}
+{{- range .Inlines}}
 	{{.FiledName}}
-{{end}}
+{{- end}}
 }
 
 type {{.Name|firstToLower}}Field struct {
 	{{.FieldAlias}}BaseField[{{.Name}}]
-{{range .Inlines}}
+{{- range .Inlines}}
 	{{.FiledName}}
-{{end}}
+{{- end}}
 }
 
 var {{.Name}}Coll = New{{.Name}}Field("")
 
 func New{{.Name}}Field(name string) {{.Name}}Field {
 	return &{{.Name|firstToLower}}Field{
-		BaseField: {{.FieldAlias}}BaseField[{{.Name}}]{name}},
-{{range .Inlines}}
+		*{{.FieldAlias}}NewBaseField[{{.Name}}](name),
+{{- range .Inlines}}
 		{{.NewField}}(name),
-{{end}}
+{{- end}}
 	}
 }
 
-{{range .Fields}}
+{{- range .Fields}}
+
 func (s *{{$.Name|firstToLower}}Field) {{.MethodName}}() {{.FieldName}} {
 	return {{.NewField}}({{$.FieldAlias}}SubField(s.FullName(), "{{.TagName}}"))
 }
-{{end}}
+{{- end}}
 `))
 
 type aliasNames map[string]bool
@@ -442,7 +443,7 @@ func (m *allImports) exclude(paths string) {
 	m.exc[paths] = true
 }
 
-// return  `alias.`  or ``
+// return  `alias`  or ``
 func (m *allImports) add(paths string) (alias string) {
 	if paths == "" || m.exc[paths] {
 		return ""
@@ -455,7 +456,14 @@ func (m *allImports) add(paths string) (alias string) {
 	a := m.alias.get(path.Base(paths))
 	m.data[paths] = a
 
-	return a + "."
+	return a
+}
+
+func addDot(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return s + "."
 }
 
 type importTemp struct {
@@ -516,15 +524,15 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 	thisImports.exclude(b.targetPkg)
 
 	// firstly, put this pkg into alias
-	thisImports.alias.get(path.Base(b.targetPkg))
+	thisImports.alias.get(b.targetPkg)
 
 	s := &st{
 		Pkg:          path.Base(b.targetPkg),
-		Name:         t.Name(),
-		FilterAlias:  thisImports.add(x.TypeFor[filter.ComparableFilter[any]]().PkgPath()),
-		FieldAlias:   thisImports.add(x.TypeFor[BaseField[any]]().PkgPath()),
-		MongoAlias:   thisImports.add(x.TypeFor[mongodb.Field]().PkgPath()),
-		UpdaterAlias: thisImports.add(x.TypeFor[updater.BaseUpdater[any]]().PkgPath()),
+		Name:         x.BaseTypeName(t),
+		FilterAlias:  addDot(thisImports.add(x.TypeFor[filter.ComparableFilter[any]]().PkgPath())),
+		FieldAlias:   addDot(thisImports.add(x.TypeFor[BaseField[any]]().PkgPath())),
+		MongoAlias:   addDot(thisImports.add(x.TypeFor[mongodb.Field]().PkgPath())),
+		UpdaterAlias: addDot(thisImports.add(x.TypeFor[updater.BaseUpdater[any]]().PkgPath())),
 		Inlines:      make([]Inline, 0),
 	}
 
@@ -559,8 +567,8 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 			panic(fmt.Errorf("not support %v", f.Type))
 		}
 		equalAble = equalAble && subFt.EqualAble
-		subFName := thisImports.add(subFt.Field.PkgPath()) + subFt.Field.Name()
-		subNewF := thisImports.add(subFt.NewField.PkgPath()) + subFt.NewField.Name()
+		subFName := addDot(thisImports.add(subFt.Field.PkgPath())) + subFt.Field.Name()
+		subNewF := addDot(thisImports.add(subFt.NewField.PkgPath())) + subFt.NewField.Name()
 		// inline
 		if tag.Inline && f.Type.Kind() == reflect.Struct {
 			s.Inlines = append(s.Inlines, Inline{subFName, subNewF})
@@ -586,8 +594,8 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 
 	ft = TypeInfo{
 		T:         t,
-		Field:     &reflectType{name: s.Name, pkg: s.Pkg},
-		NewField:  &reflectType{name: "New" + s.Name, pkg: s.Pkg},
+		Field:     &reflectType{name: s.Name + "Field", pkg: b.targetPkg},
+		NewField:  &reflectType{name: "New" + s.Name + "Field", pkg: b.targetPkg},
 		EqualAble: equalAble,
 	}
 
