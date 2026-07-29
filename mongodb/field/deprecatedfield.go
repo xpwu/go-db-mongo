@@ -34,47 +34,60 @@ type deprecatedBaseFilter interface {
 	Type(t bson.Type) filter.Filter
 }
 
-type binary0FUpdaterF interface {
+type depTypeBaseUpdater[T any] interface {
 	deprecatedBaseUpdater
-	Set(value bson.Binary) updater.Updater
-	SetOnIns(value bson.Binary) updater.Updater
+	Set(value T) updater.Updater
+	SetOnIns(value T) updater.Updater
 }
 
-type binary0FFilterF interface {
+type depTypeBaseFilter[T any] interface {
 	deprecatedBaseFilter
-	In(values []bson.Binary) filter.Filter
-	Nin(values []bson.Binary) filter.Filter
+	In(values []T) filter.Filter
+	Nin(values []T) filter.Filter
 }
 
-type binary0F interface {
-	binary0FUpdaterF
-	binary0FFilterF
-	deprecatedBaseKey
+type depMethods[T any] interface {
+	// Deprecated: Min using: updater.BaseUpdater[].SetMin
+	Min(value T) updater.Updater
+	// Deprecated: Max using: updater.BaseUpdater[].SetMax
+	Max(value T) updater.Updater
+	// Deprecated: SetOnIns using: updater.BaseUpdater[].SetOnInsert
+	SetOnIns(value T) updater.Updater
 }
 
-// Deprecated: Binary0F using BinaryField
-type Binary0F struct {
-	BinaryField
+type depMethodsImpl[T any] struct {
+	updater.BaseUpdater[T]
 }
 
 // Deprecated: Min using: updater.BaseUpdater[].SetMin
-func (f *Binary0F) Min(value bson.Binary) updater.Updater {
+func (f *depMethodsImpl[T]) Min(value T) updater.Updater {
 	return f.SetMin(value)
 }
 
 // Deprecated: Max using: updater.BaseUpdater[].SetMax
-func (f *Binary0F) Max(value bson.Binary) updater.Updater {
+func (f *depMethodsImpl[T]) Max(value T) updater.Updater {
 	return f.SetMax(value)
 }
 
 // Deprecated: SetOnIns using: updater.BaseUpdater[].SetOnInsert
-func (f *Binary0F) SetOnIns(value bson.Binary) updater.Updater {
+func (f *depMethodsImpl[T]) SetOnIns(value T) updater.Updater {
 	return f.SetOnInsert(value)
 }
 
-// Deprecated: NewBinary0F using NewBinaryField
-func NewBinary0F(fName string) *Binary0F {
-	return &Binary0F{NewBinaryField(fName)}
+type depBinary0FUpdaterF = depTypeBaseUpdater[bson.Binary]
+
+type depBinary0FFilterF = depTypeBaseFilter[bson.Binary]
+
+type depBinary0F interface {
+	depBinary0FUpdaterF
+	depBinary0FFilterF
+	deprecatedBaseKey
+}
+
+// Deprecated: Binary0F using BinaryField
+type Binary0F interface {
+	BinaryField
+	depMethods[bson.Binary]
 }
 
 // Deprecated
@@ -85,12 +98,23 @@ type (
 
 // Deprecated
 var (
-	_ binary0F         = &Binary0F{}
-	_ binary0FUpdaterF = &Binary0FUpdaterF{}
-	_ binary0FFilterF  = &Binary0FFilterF{}
+	_ depBinary0F         = Binary0F(nil)
+	_ depBinary0FUpdaterF = Binary0FUpdaterF(nil)
+	_ depBinary0FFilterF  = Binary0FFilterF(nil)
 )
 
-type arrayField interface {
+type binary0F struct {
+	BinaryField
+	depMethodsImpl[bson.Binary]
+}
+
+// Deprecated: NewBinary0F using NewBinaryField
+func NewBinary0F(fName string) Binary0F {
+	f := NewBinaryField(fName)
+	return &binary0F{f, depMethodsImpl[bson.Binary]{f}}
+}
+
+type depArrayField interface {
 	deprecatedBaseFilter
 	deprecatedBaseUpdater
 	deprecatedBaseKey
@@ -103,30 +127,38 @@ type arrayField interface {
 	Size(sz int) filter.Filter
 }
 
-// Deprecated: Array using ArrayField
-type Array struct {
+// Deprecated: array using ArrayField
+type Array interface {
+	ArrayField[any, mongodb.Field]
+	// Deprecated: PullByF using ArrayField[].RemoveVirValue
+	PullByF(f filter.Filter) updater.Updater
+	// Deprecated: SameEleMatch using ArrayField[].SameElemMeet
+	SameEleMatch(f filter.Filter) filter.Filter
+}
+
+type array struct {
 	ArrayField[any, mongodb.Field]
 }
 
 // Deprecated: PullByF using ArrayField[].RemoveVirValue
-func (a *Array) PullByF(f filter.Filter) updater.Updater {
+func (a *array) PullByF(f filter.Filter) updater.Updater {
 	return updater.PullByFilter(a, f)
 }
 
 // Deprecated: SameEleMatch using ArrayField[].SameElemMeet
-func (a *Array) SameEleMatch(f filter.Filter) filter.Filter {
+func (a *array) SameEleMatch(f filter.Filter) filter.Filter {
 	return filter.SameElemMatch(a, f)
 }
 
 // Deprecated: NewArray using NewArrayField
-var (
-	NewArray func(fName string) *Array = func(fName string) *Array {
-		return &Array{NewArrayField[any, mongodb.Field](fName, func(name string) mongodb.Field {
-			return &BaseField[any]{name: name}
-		})}
-	}
+func NewArray(fName string) Array {
+	return &array{NewArrayField[any, mongodb.Field](fName, func(name string) mongodb.Field {
+		return &BaseField[any]{name: name}
+	})}
+}
 
-	_ arrayField = NewArray("")
+var (
+	_ depArrayField = NewArray("")
 )
 
 type depTypeArrayField[T any, ElemField mongodb.Field] struct {
@@ -222,7 +254,7 @@ func newDepCompAbleArrF[T comparable, ElemField mongodb.Field](fName string,
 }
 
 type binary1Field struct {
-	*depTypeArrayField[bson.Binary, BinaryField]
+	*depTypeArrayField[bson.Binary, Binary0F]
 }
 
 // Deprecated: Push using ArrayField[].Push
@@ -235,8 +267,8 @@ type Binary1Field interface {
 	deprecatedBaseFilter
 	deprecatedBaseUpdater
 	deprecatedBaseKey
-	EleAt(index int) Binary0F
-	EleOne() Binary0F
+	EleAt(index int) binary0F
+	EleOne() binary0F
 	EleThat() Binary0FUpdaterF
 	EleAll() Binary0FUpdaterF
 	EleByFid(identifier string) Binary0FUpdaterF
@@ -254,10 +286,10 @@ type Binary1Field interface {
 
 // Deprecated: NewBinary1Field using NewArrayEqualAbleField[bson.Binary, BinaryField]
 func NewBinary1Field(fName string) Binary1Field {
-	return &binary1Field{newDepEqualAbleArrF[bson.Binary, BinaryField](fName, NewBinaryField)}
+	return &binary1Field{newDepEqualAbleArrF[bson.Binary, Binary0F](fName, NewBinary0F)}
 }
 
-type bool0FUpdaterF interface {
+type depBool0FUpdaterF interface {
 	deprecatedBaseUpdater
 	Min(value bool) updater.Updater
 	Max(value bool) updater.Updater
@@ -265,7 +297,7 @@ type bool0FUpdaterF interface {
 	SetOnIns(value bool) updater.Updater
 }
 
-type bool0FFilterF interface {
+type depBool0FFilterF interface {
 	deprecatedBaseFilter
 	Eq(value bool) filter.Filter
 	Ne(value bool) filter.Filter
@@ -283,51 +315,56 @@ type bool0FFilterF interface {
 	Nin(values []bool) filter.Filter
 }
 
-type bool0F interface {
-	bool0FUpdaterF
-	bool0FFilterF
+type depBool0F interface {
+	depBool0FUpdaterF
+	depBool0FFilterF
 	deprecatedBaseKey
 }
 
 // Deprecated: Bool0F using BoolField
-type Bool0F struct {
+type Bool0F interface {
+	ComparableField[bool]
+	depMethods[bool]
+}
+
+type bool0F struct {
 	ComparableField[bool]
 }
 
 // Deprecated: Min using: updater.BaseUpdater[].SetMin
-func (f *Bool0F) Min(value bool) updater.Updater {
+func (f *bool0F) Min(value bool) updater.Updater {
 	return f.SetMin(value)
 }
 
 // Deprecated: Max using: updater.BaseUpdater[].SetMax
-func (f *Bool0F) Max(value bool) updater.Updater {
+func (f *bool0F) Max(value bool) updater.Updater {
 	return f.SetMax(value)
 }
 
 // Deprecated: SetOnIns using: updater.BaseUpdater[].SetOnInsert
-func (f *Bool0F) SetOnIns(value bool) updater.Updater {
+func (f *bool0F) SetOnIns(value bool) updater.Updater {
 	return f.SetOnInsert(value)
 }
 
 // Deprecated: NewBool0F using NewBoolField
-func NewBool0F(fName string) *Bool0F {
-	return &Bool0F{NewBoolField(fName)}
+func NewBool0F(fName string) bool0F {
+	return bool0F{NewBoolField(fName)}
 }
 
 // Deprecated:
 type (
-	Bool0FUpdaterF = Bool0F
-	Bool0FFilterF  = Bool0F
+	Bool0FUpdaterF = bool0F
+	Bool0FFilterF  = bool0F
 )
 
 var (
-	_ bool0F         = &Bool0F{}
-	_ bool0FUpdaterF = &Bool0FUpdaterF{}
-	_ bool0FFilterF  = &Bool0FFilterF{}
+	_ depBool0F         = &bool0F{}
+	_ depBool0FUpdaterF = &Bool0FUpdaterF{}
+	_ depBool0FFilterF  = &Bool0FFilterF{}
 )
 
 type bool1Field struct {
-	*depTypeArrayField[bool, BoolField]
+	*depTypeArrayField[bool, bool0F]
 }
 
 // Deprecated: Push using ArrayField[].Push
@@ -340,8 +377,8 @@ type Bool1Field interface {
 	deprecatedBaseFilter
 	deprecatedBaseUpdater
 	deprecatedBaseKey
-	EleAt(index int) Bool0F
-	EleOne() Bool0F
+	EleAt(index int) bool0F
+	EleOne() bool0F
 	EleThat() Bool0FUpdaterF
 	EleAll() Bool0FUpdaterF
 	EleByFid(identifier string) Bool0FUpdaterF
@@ -359,7 +396,7 @@ type Bool1Field interface {
 
 // Deprecated: NewBool1Field using NewArrayEqualAbleField[bool, BoolField]
 func NewBool1Field(fName string) Bool1Field {
-	return &bool1Field{newDepCompAbleArrF[bool, BoolField](fName, NewBoolField)}
+	return &bool1Field{newDepCompAbleArrF[bool, bool0F](fName, NewBool0F)}
 }
 
 type decimal1280FUpdaterF interface {
@@ -409,8 +446,8 @@ func (f *Decimal1280F) SetOnIns(value bson.Decimal128) updater.Updater {
 }
 
 // Deprecated: NewDecimal1280F using NewDecimal128Field
-func NewDecimal1280F(fName string) *Decimal1280F {
-	return &Decimal1280F{NewDecimal128Field(fName)}
+func NewDecimal1280F(fName string) Decimal1280F {
+	return Decimal1280F{NewDecimal128Field(fName)}
 }
 
 // Deprecated:
@@ -426,7 +463,7 @@ var (
 )
 
 type decimal1281Field struct {
-	*depTypeArrayField[bson.Decimal128, Decimal128Field]
+	*depTypeArrayField[bson.Decimal128, Decimal1280F]
 }
 
 // Deprecated: Push using ArrayField[].Push
@@ -458,7 +495,7 @@ type Decimal1281Field interface {
 
 // Deprecated: NewDecimal1281Field using NewArrayEqualAbleField[bson.Decimal128, Decimal128Field]
 func NewDecimal1281Field(fName string) Decimal1281Field {
-	return &decimal1281Field{newDepCompAbleArrF[bson.Decimal128, Decimal128Field](fName, NewDecimal128Field)}
+	return &decimal1281Field{newDepCompAbleArrF[bson.Decimal128, Decimal1280F](fName, NewDecimal1280F)}
 }
 
 type float320FUpdaterF interface {
@@ -516,8 +553,8 @@ func (f *Float320F) Nin(values []float32) filter.Filter {
 }
 
 // Deprecated: NewFloat320F using NewFloat32Field
-func NewFloat320F(fName string) *Float320F {
-	return &Float320F{NewFloat32Field(fName)}
+func NewFloat320F(fName string) Float320F {
+	return Float320F{NewFloat32Field(fName)}
 }
 
 // Deprecated:
@@ -533,7 +570,7 @@ var (
 )
 
 type float321Field struct {
-	*depTypeArrayField[float32, Float32Field]
+	*depTypeArrayField[float32, Float320F]
 }
 
 // Deprecated: Push using ArrayField[].Push
@@ -565,7 +602,7 @@ type Float321Field interface {
 
 // Deprecated: NewFloat321Field using ArrayComparableField[float32, Float32Field]
 func NewFloat321Field(fName string) Float321Field {
-	return &float321Field{newDepCompAbleArrF[float32, Float32Field](fName, NewFloat32Field)}
+	return &float321Field{newDepCompAbleArrF[float32, Float320F](fName, NewFloat320F)}
 }
 
 type int0FUpdaterF interface {
@@ -624,8 +661,8 @@ func (f *Int0F) SetOnIns(value int) updater.Updater {
 }
 
 // Deprecated: NewInt0F using NewIntField
-func NewInt0F(fName string) *Int0F {
-	return &Int0F{NewIntField(fName)}
+func NewInt0F(fName string) Int0F {
+	return Int0F{NewIntField(fName)}
 }
 
 // Deprecated:
@@ -641,7 +678,7 @@ var (
 )
 
 type int1Field struct {
-	*depTypeArrayField[int, IntField]
+	*depTypeArrayField[int, Int0F]
 }
 
 // Deprecated: Push using ArrayField[].Push
@@ -673,7 +710,7 @@ type Int1Field interface {
 
 // Deprecated: NewInt1Field using ArrayComparableField[int, IntField]
 func NewInt1Field(fName string) Int1Field {
-	return &int1Field{newDepCompAbleArrF[int, IntField](fName, NewIntField)}
+	return &int1Field{newDepCompAbleArrF[int, Int0F](fName, NewInt0F)}
 }
 
 // Deprecated: use Int8Field instead.
@@ -721,8 +758,8 @@ var _ int80FUpdaterF = &Int80F{}
 var _ int80FFilterF = &Int80F{}
 
 // Deprecated: use NewInt8Field instead.
-func NewInt80F(fieldName string) *Int80F {
-	return &Int80F{NewInt8Field(fieldName)}
+func NewInt80F(fieldName string) Int80F {
+	return Int80F{NewInt8Field(fieldName)}
 }
 
 // Deprecated: use SetMin instead.
@@ -747,7 +784,7 @@ type Int80FUpdaterF = Int80F
 type Int80FFilterF = Int80F
 
 type int81Field struct {
-	*depTypeArrayField[int, Int8Field]
+	*depTypeArrayField[int, Int80F]
 }
 
 // Deprecated: Push using ArrayField[].Push
@@ -779,7 +816,7 @@ type Int81Field interface {
 
 // Deprecated: NewInt81Field using ArrayComparableField[int, UintField]
 func NewInt81Field(fName string) Int81Field {
-	return &int81Field{newDepCompAbleArrF[int, Int8Field](fName, NewInt8Field)}
+	return &int81Field{newDepCompAbleArrF[int, Int80F](fName, NewInt80F)}
 }
 
 // Deprecated: use Int16Field instead.
@@ -827,8 +864,8 @@ var _ int160FUpdaterF = &Int160F{}
 var _ int160FFilterF = &Int160F{}
 
 // Deprecated: use NewInt16Field instead.
-func NewInt160F(fieldName string) *Int160F {
-	return &Int160F{NewInt16Field(fieldName)}
+func NewInt160F(fieldName string) Int160F {
+	return Int160F{NewInt16Field(fieldName)}
 }
 
 // Deprecated: use SetMin instead.
@@ -853,7 +890,7 @@ type Int160FUpdaterF = Int160F
 type Int160FFilterF = Int160F
 
 type int161Field struct {
-	*depTypeArrayField[int16, Int16Field]
+	*depTypeArrayField[int16, Int160F]
 }
 
 // Deprecated: Push using ArrayField[].Push
@@ -885,7 +922,7 @@ type Int161Field interface {
 
 // Deprecated: NewInt161Field using ArrayComparableField[int16, Int16Field]
 func NewInt161Field(fName string) Int161Field {
-	return &int161Field{newDepCompAbleArrF[int16, Int16Field](fName, NewInt16Field)}
+	return &int161Field{newDepCompAbleArrF[int16, Int160F](fName, NewInt160F)}
 }
 
 // Deprecated: use Int32Field instead.
@@ -933,8 +970,8 @@ var _ int320FUpdaterF = &Int320F{}
 var _ int320FFilterF = &Int320F{}
 
 // Deprecated: use NewInt32Field instead.
-func NewInt320F(fieldName string) *Int320F {
-	return &Int320F{NewInt32Field(fieldName)}
+func NewInt320F(fieldName string) Int320F {
+	return Int320F{NewInt32Field(fieldName)}
 }
 
 // Deprecated: use SetMin instead.
@@ -959,7 +996,7 @@ type Int320FUpdaterF = Int320F
 type Int320FFilterF = Int320F
 
 type int321Field struct {
-	*depTypeArrayField[int32, Int32Field]
+	depTypeArrayField[int32, Int320F]
 }
 
 // Deprecated: Push using ArrayField[].Push
@@ -991,7 +1028,7 @@ type Int321Field interface {
 
 // Deprecated: NewInt321Field using ArrayComparableField[int32, Int32Field]
 func NewInt321Field(fName string) Int321Field {
-	return &int321Field{newDepCompAbleArrF[int32, Int32Field](fName, NewInt32Field)}
+	return &int321Field{*newDepCompAbleArrF[int32, Int320F](fName, NewInt320F)}
 }
 
 // Deprecated: use Int64Field instead.
