@@ -58,15 +58,15 @@ func NewTypeInfo[T any, FieldType mongodb.Field](creator func(name string) Field
 	})
 
 	funName := &reflectType{pkg: strings.Join(f[:len(f)-1], "."), name: f[len(f)-1]}
-	equalAble := x.TypeFor[FieldType]().Implements(x.TypeFor[filter.ComparableFilterField]())
+	equalAble := x.TypeFor[FieldType]().Implements(x.TypeFor[filter.ComparableFilterField[any]]())
 
 	return TypeInfo{x.TypeFor[T](), x.TypeFor[FieldType](), funName, equalAble}
 }
 
 func typeFieldInfo[T any](field, creator string, equalAble bool) TypeInfo {
 	return TypeInfo{x.TypeFor[T](),
-		&reflectType{name: field, pkg: x.TypeFor[BaseField]().PkgPath()},
-		&reflectType{name: creator, pkg: x.TypeFor[BaseField]().PkgPath()}, equalAble}
+		&reflectType{name: field, pkg: x.TypeFor[BaseField[any]]().PkgPath()},
+		&reflectType{name: creator, pkg: x.TypeFor[BaseField[any]]().PkgPath()}, equalAble}
 }
 
 type structContext struct {
@@ -276,13 +276,13 @@ func (b *CollBuilder) buildSlice(t reflect.Type) (ft TypeInfo, ok bool) {
 	thisImports := b.structCtx.imports
 
 	// Array 的代码都在同一 package 下
-	arrPkg := thisImports.add(x.TypeFor[ArrayField]().PkgPath())
+	arrPkg := thisImports.add(x.TypeFor[ArrayField[any, mongodb.Field]]().PkgPath())
 
 	arrField := ""
 	if !eft.EqualAble {
-		arrField = arrPkg + x.TypeFor[ArrayField]().Name()
+		arrField = arrPkg + x.TypeFor[ArrayField[any, mongodb.Field]]().Name()
 	} else {
-		arrField = arrPkg + x.TypeFor[ArrayComparableField]().Name()
+		arrField = arrPkg + x.TypeFor[ArrayComparableField[any, mongodb.Field]]().Name()
 	}
 
 	arrNewField := arrPkg + "NewArrayField"
@@ -521,10 +521,10 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 	s := &st{
 		Pkg:          path.Base(b.targetPkg),
 		Name:         t.Name(),
-		FilterAlias:  thisImports.add(x.TypeFor[filter.ComparableFilter]().PkgPath()),
-		FieldAlias:   thisImports.add(x.TypeFor[BaseField]().PkgPath()),
+		FilterAlias:  thisImports.add(x.TypeFor[filter.ComparableFilter[any]]().PkgPath()),
+		FieldAlias:   thisImports.add(x.TypeFor[BaseField[any]]().PkgPath()),
 		MongoAlias:   thisImports.add(x.TypeFor[mongodb.Field]().PkgPath()),
-		UpdaterAlias: thisImports.add(x.TypeFor[updater.BaseUpdater]().PkgPath()),
+		UpdaterAlias: thisImports.add(x.TypeFor[updater.BaseUpdater[any]]().PkgPath()),
 		Inlines:      make([]Inline, 0),
 	}
 
