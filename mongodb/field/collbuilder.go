@@ -375,15 +375,14 @@ import ({{- range .Imports}}
 
 type {{.Name}}Field interface {
 	{{.MongoAlias}}Field
-	{{.FilterAlias}}ComparableFilter[{{.Name}}]
-	{{.UpdaterAlias}}BaseUpdater[{{.Name}}]
+	{{.FilterAlias}}ComparableFilter[{{.TypePkg}}{{.Name}}]
+	{{.UpdaterAlias}}BaseUpdater[{{.TypePkg}}{{.Name}}]
 {{- range .Fields}}
 	{{.MethodName}}F() {{.FieldName}}
 {{- end}}
 {{- range .Inlines}}
 	{{.FiledName}}Inline
 {{- end}}
-	//{{.SelfName}}() {{.FieldAlias}}{{.StructField}}[{{.Name}}]
 }
 
 type {{.Name}}FieldInline interface {
@@ -393,46 +392,34 @@ type {{.Name}}FieldInline interface {
 {{- range .Inlines}}
 	{{.FiledName}}Inline
 {{- end}}
-	//{{.SelfName}}() {{.FieldAlias}}{{.StructField}}[{{.Name}}]
 }
 
 type {{.Name|firstToLower}}Field struct {
-	{{.FieldAlias}}BaseField[{{.Name}}]
+	{{.FieldAlias}}BaseField[{{.TypePkg}}{{.Name}}]
 {{- range .Inlines}}
 	{{.FiledName}}Inline
 {{- end}}
-	//self {{.FieldAlias}}{{.StructField}}[{{.Name}}]
 }
 
 var {{.Name}}Doc = New{{.Name}}Field("")
 
 func New{{.Name}}Field(name string) {{.Name}}Field {
 	return &{{.Name|firstToLower}}Field{
-		*{{.FieldAlias}}NewBaseField[{{.Name}}](name),
+		*{{.FieldAlias}}NewBaseField[{{.TypePkg}}{{.Name}}](name),
 {{- range .Inlines}}
 		{{.NewField}}Inline(name),
 {{- end}}
-		//{{.FieldAlias}}NewBaseField[{{.Name}}](name),
 	}
 }
 
 func New{{.Name}}FieldInline(name string) {{.Name}}FieldInline {
 	return &{{.Name|firstToLower}}Field{
-		*{{.FieldAlias}}NewBaseField[{{.Name}}](name),
+		*{{.FieldAlias}}NewBaseField[{{.TypePkg}}{{.Name}}](name),
 {{- range .Inlines}}
 		{{.NewField}}Inline(name),
 {{- end}}
-		//{{.FieldAlias}}NewBaseField[{{.Name}}](name),
 	}
 }
-
-//func (s *{{$.Name|firstToLower}}Field) FullName() string {
-//	return s.self.FullName()
-//}
-
-//func (s *{{$.Name|firstToLower}}Field) {{.SelfName}}() {{.FieldAlias}}{{.StructField}}[{{.Name}}] {
-//	return s.self
-//}
 
 {{- range .Fields}}
 
@@ -474,7 +461,7 @@ func (m *allImports) exclude(paths string) {
 	m.exc[paths] = true
 }
 
-// return  `alias`  or ``
+// return  `alias`  or “
 func (m *allImports) add(paths string) (alias string) {
 	if paths == "" || m.exc[paths] {
 		return ""
@@ -535,6 +522,7 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 
 	type st struct {
 		Pkg          string
+		TypePkg      string
 		Name         string
 		FieldAlias   string
 		MongoAlias   string
@@ -543,8 +531,6 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 		Imports      []importTemp
 		Fields       []Field
 		Inlines      []Inline
-		SelfName     string
-		StructField  string
 	}
 
 	oldCtx := b.structCtx
@@ -554,14 +540,29 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 
 	b.structCtx = &structContext{imports: newAllImports()}
 	thisImports := b.structCtx.imports
-	thisImports.exclude(b.targetPkg)
+
+	thisPkg := b.targetPkg
+	thisDir := b.dir
+	thisName := x.BaseTypeName(t)
+
+	if b.targetPkg != t.PkgPath() {
+		subDir := x.SanitizePackageName(t.PkgPath()) + base6408(t.PkgPath())
+		if strings.HasPrefix(t.PkgPath(), b.targetPkg+"/") {
+			subDir = strings.TrimPrefix(t.PkgPath(), b.targetPkg+"/")
+		}
+		thisPkg = path.Join(b.targetPkg, subDir)
+		thisDir = path.Join(b.dir, subDir)
+	}
+
+	thisImports.exclude(thisPkg)
 
 	// firstly, put this pkg into alias
-	thisImports.alias.get(b.targetPkg)
+	thisImports.alias.get(thisPkg)
 
 	s := &st{
-		Pkg:          path.Base(b.targetPkg),
-		Name:         x.BaseTypeName(t),
+		Pkg:          path.Base(thisPkg),
+		TypePkg:      addDot(thisImports.add(t.PkgPath())),
+		Name:         thisName,
 		FilterAlias:  addDot(thisImports.add(x.TypeFor[filter.ComparableFilter[any]]().PkgPath())),
 		FieldAlias:   addDot(thisImports.add(x.TypeFor[BaseField[any]]().PkgPath())),
 		MongoAlias:   addDot(thisImports.add(x.TypeFor[mongodb.Field]().PkgPath())),
@@ -615,22 +616,14 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 
 		allSubName[fd.MethodName] = true
 	}
-	//s.SelfName = "Self"
-	//for i := 1; i < len(allSubName)+2; i++ {
-	//	if !allSubName[s.SelfName] {
-	//		break
-	//	}
-	//	s.SelfName = fmt.Sprintf("Self%d", i)
-	//}
-	//if equalAble {
-	//	s.StructField = "ComparableStructField"
-	//} else {
-	//	s.StructField = "BaseStructField"
-	//}
 
 	s.Imports = thisImports.all()
 
-	file, err := os.Create(fmt.Sprintf("%s/z%sField_%s.go", b.dir, t.Name(), base6408(t.PkgPath())))
+	if err := os.MkdirAll(thisDir, 0755); err != nil {
+		panic(err)
+	}
+
+	file, err := os.Create(fmt.Sprintf("%s/z%sField.go", thisDir, t.Name()))
 	if err != nil {
 		panic(err)
 	}
@@ -642,8 +635,8 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 
 	ft = TypeInfo{
 		T:         t,
-		Field:     &reflectType{name: s.Name + "Field", pkg: b.targetPkg},
-		NewField:  &reflectType{name: "New" + s.Name + "Field", pkg: b.targetPkg},
+		Field:     &reflectType{name: thisName + "Field", pkg: thisPkg},
+		NewField:  &reflectType{name: "New" + thisName + "Field", pkg: thisPkg},
 		EqualAble: equalAble,
 	}
 
