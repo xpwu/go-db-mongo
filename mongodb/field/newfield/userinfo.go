@@ -7,16 +7,17 @@ import (
 )
 
 type Wx struct {
-	Age   bson.Decimal128
+	Age   *bson.Decimal128
 	Time  *int
 	Order base.Order
 	Third elsejson.ThirdParty
 }
 
 type UserInfo struct {
-	Login int
+	Login int `bson:"login"`
 	Pass  []int
-	Wx    Wx
+	Wx    *Wx
+	Wx3   Wx
 	Ws    []Wx
 	Pass2 [][]int16
 	InWx  Wx `bson:"inWx,inline"`

@@ -1,17 +1,19 @@
 package newfield
 
 import (
-  "fmt"
-  "github.com/xpwu/go-db-mongo/mongodb/field"
+	"fmt"
+	"github.com/xpwu/go-db-mongo/mongodb/field"
+	"github.com/xpwu/go-db-mongo/mongodb/field/elsejson"
 )
 
 func ExampleBuilder() {
 
-  builder := field.NewBuilder()
-  //builder.Build(reflect.TypeOf(UserInfo{}))
-  field.BuildColl[UserInfo](builder)
+	builder := field.NewBuilder()
 
-  fmt.Println(true)
-  // Output:
-  // true
+	field.BuildColl[UserInfo](builder)
+	field.BuildColl[elsejson.ThirdParty](builder)
+
+	fmt.Println(true)
+	// Output:
+	// true
 }
