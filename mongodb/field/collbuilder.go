@@ -112,12 +112,12 @@ func IgnoreTagErr() BuilderOption {
 	}
 }
 
-func WithDirAndPkg(dir, pkg string) BuilderOption {
-	return func(option *builderOption) {
-		option.dir = dir
-		option.targetPkg = pkg
-	}
-}
+//func WithDirAndPkg(dir, pkg string) BuilderOption {
+//	return func(option *builderOption) {
+//		option.dir = dir
+//		option.targetPkg = pkg
+//	}
+//}
 
 func NewBuilder(opts ...BuilderOption) *CollBuilder {
 	op := &builderOption{
