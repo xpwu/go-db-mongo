@@ -378,34 +378,65 @@ type {{.Name}}Field interface {
 	{{.FilterAlias}}ComparableFilter[{{.Name}}]
 	{{.UpdaterAlias}}BaseUpdater[{{.Name}}]
 {{- range .Fields}}
-	{{.MethodName}}() {{.FieldName}}
+	{{.MethodName}}F() {{.FieldName}}
 {{- end}}
 {{- range .Inlines}}
-	{{.FiledName}}
+	{{.FiledName}}Inline
 {{- end}}
+	//{{.SelfName}}() {{.FieldAlias}}{{.StructField}}[{{.Name}}]
+}
+
+type {{.Name}}FieldInline interface {
+{{- range .Fields}}
+	{{.MethodName}}F() {{.FieldName}}
+{{- end}}
+{{- range .Inlines}}
+	{{.FiledName}}Inline
+{{- end}}
+	//{{.SelfName}}() {{.FieldAlias}}{{.StructField}}[{{.Name}}]
 }
 
 type {{.Name|firstToLower}}Field struct {
 	{{.FieldAlias}}BaseField[{{.Name}}]
 {{- range .Inlines}}
-	{{.FiledName}}
+	{{.FiledName}}Inline
 {{- end}}
+	//self {{.FieldAlias}}{{.StructField}}[{{.Name}}]
 }
 
-var {{.Name}}Coll = New{{.Name}}Field("")
+var {{.Name}}Doc = New{{.Name}}Field("")
 
 func New{{.Name}}Field(name string) {{.Name}}Field {
 	return &{{.Name|firstToLower}}Field{
 		*{{.FieldAlias}}NewBaseField[{{.Name}}](name),
 {{- range .Inlines}}
-		{{.NewField}}(name),
+		{{.NewField}}Inline(name),
 {{- end}}
+		//{{.FieldAlias}}NewBaseField[{{.Name}}](name),
 	}
 }
 
+func New{{.Name}}FieldInline(name string) {{.Name}}FieldInline {
+	return &{{.Name|firstToLower}}Field{
+		*{{.FieldAlias}}NewBaseField[{{.Name}}](name),
+{{- range .Inlines}}
+		{{.NewField}}Inline(name),
+{{- end}}
+		//{{.FieldAlias}}NewBaseField[{{.Name}}](name),
+	}
+}
+
+//func (s *{{$.Name|firstToLower}}Field) FullName() string {
+//	return s.self.FullName()
+//}
+
+//func (s *{{$.Name|firstToLower}}Field) {{.SelfName}}() {{.FieldAlias}}{{.StructField}}[{{.Name}}] {
+//	return s.self
+//}
+
 {{- range .Fields}}
 
-func (s *{{$.Name|firstToLower}}Field) {{.MethodName}}() {{.FieldName}} {
+func (s *{{$.Name|firstToLower}}Field) {{.MethodName}}F() {{.FieldName}} {
 	return {{.NewField}}({{$.FieldAlias}}SubField(s.FullName(), "{{.TagName}}"))
 }
 {{- end}}
@@ -512,6 +543,8 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 		Imports      []importTemp
 		Fields       []Field
 		Inlines      []Inline
+		SelfName     string
+		StructField  string
 	}
 
 	oldCtx := b.structCtx
@@ -536,6 +569,7 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 		Inlines:      make([]Inline, 0),
 	}
 
+	allSubName := make(map[string]bool)
 	equalAble := true
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -575,10 +609,24 @@ func (b *CollBuilder) buildStruct(t reflect.Type) (ft TypeInfo, ok bool) {
 		} else {
 			fd.FieldName = subFName
 			fd.NewField = indentLines(subNewF, 2)
+
+			s.Fields = append(s.Fields, fd)
 		}
 
-		s.Fields = append(s.Fields, fd)
+		allSubName[fd.MethodName] = true
 	}
+	//s.SelfName = "Self"
+	//for i := 1; i < len(allSubName)+2; i++ {
+	//	if !allSubName[s.SelfName] {
+	//		break
+	//	}
+	//	s.SelfName = fmt.Sprintf("Self%d", i)
+	//}
+	//if equalAble {
+	//	s.StructField = "ComparableStructField"
+	//} else {
+	//	s.StructField = "BaseStructField"
+	//}
 
 	s.Imports = thisImports.all()
 
