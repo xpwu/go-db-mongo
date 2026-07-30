@@ -1,12 +1,16 @@
 package newfield
 
 import (
+	"github.com/xpwu/go-db-mongo/mongodb/field/elsejson"
+	"github.com/xpwu/go-db-mongo/mongodb/field/newfield/base"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Wx struct {
-	Age  bson.Decimal128
-	Time *int
+	Age   bson.Decimal128
+	Time  *int
+	Order base.Order
+	Third elsejson.ThirdParty
 }
 
 type UserInfo struct {
