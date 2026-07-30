@@ -181,3 +181,15 @@ func SubField(selfName, fieldName string) string {
 
 	return fmt.Sprintf("%s.%s", selfName, fieldName)
 }
+
+type BaseStructField[T any] interface {
+	mongodb.Field
+	filter.BaseFilter[T]
+	updater.BaseUpdater[T]
+}
+
+type ComparableStructField[T any] interface {
+	mongodb.Field
+	filter.ComparableFilter[T]
+	updater.BaseUpdater[T]
+}
