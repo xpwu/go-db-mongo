@@ -339,7 +339,7 @@ func (b *Builder) buildSlice(t reflect.Type) (ft Type, ok bool) {
 	s := &st{
 		Pkg:             path.Base(b.pkg),
 		Name:            firstUpper(ele.Name()) + "1Field",
-		MongoFieldAlias: imports.add(reflect.TypeOf(Array{}).PkgPath()),
+		MongoFieldAlias: imports.add(reflect.TypeOf(Builder{}).PkgPath()),
 		EleName:         imports.add(ft.F.PkgPath()) + ft.F.Name(),
 		EleOnlyName:     ft.F.Name(),
 		EleNameType:     imports.add(ele.PkgPath()) + ele.Name(),
